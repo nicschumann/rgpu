@@ -1,0 +1,8 @@
+node_modules
+
+# library distribution files
+dist
+tests/dist
+
+# documentation files
+docs

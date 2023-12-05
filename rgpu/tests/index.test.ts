@@ -1,12 +1,12 @@
 import { setup } from "../src/index";
 
-describe("GPU", () => {
-  describe("resources are available:", () => {
-    it("can acquire adapter", async () => {
+describe("GPU", function () {
+  describe("resources are available:", function () {
+    it("can acquire adapter", async function () {
       chai.assert.strictEqual(true, typeof navigator.gpu !== "undefined");
     });
 
-    it("navigator.gpu is defined", async () => {
+    it("navigator.gpu is defined", async function () {
       const adapter = await navigator.gpu.requestAdapter();
       const device = await adapter.requestDevice();
 
@@ -16,7 +16,7 @@ describe("GPU", () => {
       );
     });
 
-    it("builds properly", async () => {
+    it("builds properly", async function () {
       const device = await setup();
 
       chai.assert.strictEqual(true, device !== null);

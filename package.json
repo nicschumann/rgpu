@@ -1,32 +1,7 @@
 {
-  "name": "rgpu",
-  "version": "0.0.1",
-  "description": "Functional WebGPU",
-  "main": "src/index.ts",
-  "repository": "https://github.com/nicschumann/rgpu",
-  "author": "nicschumann",
-  "license": "MIT",
   "private": true,
-  "scripts": {
-    "build:dist": "tsup --config tsup.config.ts",
-    "build:test": "tsup --config tsup.test.config.ts",
-    "docs": "typedoc --options typedoc.json",
-    "test": "yarn build:test && karma start"
-  },
-  "devDependencies": {
-    "@types/chai": "^4.3.11",
-    "@types/mocha": "^10.0.6",
-    "@webgpu/types": "^0.1.40",
-    "chai": "^4.3.10",
-    "karma": "^6.4.2",
-    "karma-chai": "^0.1.0",
-    "karma-chrome-launcher": "^3.2.0",
-    "karma-firefox-launcher": "^2.1.2",
-    "karma-mocha": "^2.0.1",
-    "karma-spec-reporter": "^0.0.36",
-    "mocha": "^10.2.0",
-    "tsup": "^8.0.1",
-    "typedoc": "^0.25.4",
-    "typescript": "^5.3.2"
-  }
+  "workspaces": [
+    "rgpu",
+    "examples"
+  ]
 }
