@@ -1,0 +1,7 @@
+node_modules
+
+# library distribution files
+dist
+
+# platform garbage
+.DS_Store
