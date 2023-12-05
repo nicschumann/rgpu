@@ -1,4 +1,4 @@
-import setup from "../src/index";
+import { setup } from "../src/index";
 
 describe("GPU", () => {
   describe("resources are available:", () => {
