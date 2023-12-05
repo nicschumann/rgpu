@@ -2,6 +2,7 @@ node_modules
 
 # library distribution files
 dist
+tests/dist
 
 # platform garbage
 .DS_Store

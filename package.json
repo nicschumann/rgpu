@@ -8,9 +8,13 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "test": "karma start"
+    "build:dist": "tsup --config tsup.config.ts",
+    "build:test": "tsup --config tsup.test.config.ts",
+    "test": "yarn build:test && karma start"
   },
   "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
     "@webgpu/types": "^0.1.40",
     "chai": "^4.3.10",
     "karma": "^6.4.2",
@@ -20,6 +24,7 @@
     "karma-mocha": "^2.0.1",
     "karma-spec-reporter": "^0.0.36",
     "mocha": "^10.2.0",
-    "tsup": "^8.0.1"
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.2"
   }
 }
