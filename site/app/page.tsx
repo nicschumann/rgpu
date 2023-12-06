@@ -35,22 +35,12 @@ export default function Home() {
     if (!rgpu) return;
     console.log("beginLoop");
 
-    const render = rgpu.render({ vertex, fragment });
-    const id = crypto.randomUUID();
-    let shouldRun = true;
+    const draw = rgpu.render({ vertex, fragment });
+    const stop = rgpu.frame(({ dt, id }) => {
+      draw();
+    });
 
-    const frame = () => {
-      if (!shouldRun) return;
-      console.log(id);
-      render();
-      requestAnimationFrame(frame);
-    };
-
-    requestAnimationFrame(frame);
-
-    return () => {
-      shouldRun = false;
-    };
+    return stop;
   });
 
   return (

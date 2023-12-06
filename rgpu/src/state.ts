@@ -3,8 +3,18 @@ type RenderConfigOptions = {
   fragment: string;
 };
 
+type RenderLoopFlag = boolean;
+
+type RenderCallbackParameters = {
+  dt: number;
+  id: ReturnType<Crypto["randomUUID"]>;
+};
+
 export interface IGPUState {
   render: (options: RenderConfigOptions) => () => void;
+  frame: (
+    renderCallback: (parameters: RenderCallbackParameters) => void
+  ) => () => void;
 }
 
 export class RGPUState implements IGPUState {
@@ -15,6 +25,8 @@ export class RGPUState implements IGPUState {
 
   private alphaMode: GPUCanvasAlphaMode = "premultiplied";
   private format: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat();
+
+  private renderLoopFlags: { [uuid: string]: RenderLoopFlag };
 
   constructor(
     adapter: GPUAdapter,
@@ -76,6 +88,29 @@ export class RGPUState implements IGPUState {
       passEncoder.end();
 
       this.device.queue.submit([commandEncoder.finish()]);
+    };
+  }
+
+  frame(renderCallback: (parameters: RenderCallbackParameters) => void) {
+    let loopShouldRun = true;
+    const id = crypto.randomUUID();
+    let t = performance.now();
+
+    const frameCallback = () => {
+      if (!loopShouldRun) return;
+      const t_plus_1 = performance.now();
+      const dt = t_plus_1 - t;
+
+      renderCallback({ id, dt });
+
+      t = t_plus_1;
+      requestAnimationFrame(frameCallback);
+    };
+
+    requestAnimationFrame(frameCallback);
+
+    return () => {
+      loopShouldRun = false;
     };
   }
 }
