@@ -17,3 +17,5 @@ We will base the design off of the same ideas that `regl` holds core: **resource
 ## References
 
 - `regl` – [documentation](http://regl.party/), [source](https://github.com/regl-project/regl).
+- `examples` – [examples with implementations](https://webgpu.github.io/webgpu-samples/).
+- `status` – [current implementation status](https://webgpu.io).

@@ -6,4 +6,7 @@ export default defineConfig({
   format: ["cjs", "esm"],
   dts: false,
   sourcemap: true,
+  loader: {
+    ".wgsl": "text",
+  },
 });
