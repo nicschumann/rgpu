@@ -1,8 +1,5 @@
-import { IGPUState, RGPUState } from "./state";
-
-interface RGPUConfigOptions {
-  canvas: HTMLCanvasElement;
-}
+import { RGPUState } from "./state";
+import { type RGPUConfigOptions, type IGPUState } from "./types";
 
 /**
  * @param options a set of configuration {@link RGPUConfigOptions} that sets up the WebGPU state

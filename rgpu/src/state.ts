@@ -1,21 +1,8 @@
-type RenderConfigOptions = {
-  vertex: string;
-  fragment: string;
-};
-
-type RenderLoopFlag = boolean;
-
-type RenderCallbackParameters = {
-  dt: number;
-  id: ReturnType<Crypto["randomUUID"]>;
-};
-
-export interface IGPUState {
-  render: (options: RenderConfigOptions) => () => void;
-  frame: (
-    renderCallback: (parameters: RenderCallbackParameters) => void
-  ) => () => void;
-}
+import {
+  type IGPUState,
+  type RenderCallbackParameters,
+  type RenderConfigOptions,
+} from "./types";
 
 export class RGPUState implements IGPUState {
   private adapter: GPUAdapter;
@@ -25,8 +12,6 @@ export class RGPUState implements IGPUState {
 
   private alphaMode: GPUCanvasAlphaMode = "premultiplied";
   private format: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat();
-
-  private renderLoopFlags: { [uuid: string]: RenderLoopFlag };
 
   constructor(
     adapter: GPUAdapter,
