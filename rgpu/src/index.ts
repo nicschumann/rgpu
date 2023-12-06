@@ -1,10 +1,7 @@
-// @ts-ignore
-import vertex from "./tri.vert.wgsl";
-// @ts-ignore
-import fragment from "./tri.frag.wgsl";
-
 interface RGPUConfigOptions {
   canvas: HTMLCanvasElement;
+  vertexSource: string;
+  fragmentSource: string;
 }
 /**
  * ## Setup
@@ -13,7 +10,11 @@ interface RGPUConfigOptions {
  *
  * @returns a gpu device state that's ready to serve requests, or null if no device can be acquired.
  */
-export async function setup({ canvas }: RGPUConfigOptions): Promise<GPUDevice> {
+export async function setup({
+  canvas,
+  vertexSource,
+  fragmentSource,
+}: RGPUConfigOptions): Promise<GPUDevice> {
   if (typeof navigator.gpu === "undefined") {
     // TODO(Nic): make this throw an error in a principled way.
     return null;
@@ -32,33 +33,33 @@ export async function setup({ canvas }: RGPUConfigOptions): Promise<GPUDevice> {
   // canvas.width = window.innerWidth * dpr;
   // canvas.height = window.innerHeight * dpr;
 
-  context.configure({
-    device,
-    format,
-    alphaMode,
-  });
-
-  const pipeline = device.createRenderPipeline({
-    layout: "auto",
-    vertex: {
-      module: device.createShaderModule({
-        code: vertex,
-      }),
-      entryPoint: "main",
-    },
-    fragment: {
-      module: device.createShaderModule({
-        code: fragment,
-      }),
-      entryPoint: "main",
-      targets: [{ format }],
-    },
-    primitive: {
-      topology: "triangle-list",
-    },
-  });
-
   const frame = () => {
+    context.configure({
+      device,
+      format,
+      alphaMode,
+    });
+
+    const pipeline = device.createRenderPipeline({
+      layout: "auto",
+      vertex: {
+        module: device.createShaderModule({
+          code: vertexSource,
+        }),
+        entryPoint: "main",
+      },
+      fragment: {
+        module: device.createShaderModule({
+          code: fragmentSource,
+        }),
+        entryPoint: "main",
+        targets: [{ format }],
+      },
+      primitive: {
+        topology: "triangle-list",
+      },
+    });
+
     const commandEncoder = device.createCommandEncoder();
     const textureView = context.getCurrentTexture().createView();
 

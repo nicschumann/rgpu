@@ -19,3 +19,5 @@ We will base the design off of the same ideas that `regl` holds core: **resource
 - `regl` – [documentation](http://regl.party/), [source](https://github.com/regl-project/regl).
 - `examples` – [examples with implementations](https://webgpu.github.io/webgpu-samples/).
 - `status` – [current implementation status](https://webgpu.io).
+- `parsing` – [wgsl parser implementation](https://github.com/brendan-duncan/wgsl_reflect)
+- `concrete syntax trees` – [cstree implementation and notes](https://github.com/domenicquirl/cstree)

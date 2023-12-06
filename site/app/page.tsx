@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+// @ts-ignore
+import vertex from "./tri.vert.wgsl";
+// @ts-ignore
+import fragment from "./tri.frag.wgsl";
+
+import { useEffect, useRef } from "react";
 import { setup } from "rgpu";
 
 export default function Home() {
+  // REF
   const baseCanvas = useRef<HTMLCanvasElement>(null);
-  const [renderContext, setRenderContext] = useState<boolean>(false);
 
   // SETUP
   useEffect(() => {
@@ -14,17 +19,18 @@ export default function Home() {
     const dpr = window.devicePixelRatio;
     baseCanvas.current.width = window.innerWidth * dpr;
     baseCanvas.current.height = window.innerHeight * dpr;
-
-    setRenderContext(true);
   }, []);
 
   // LOOP
   useEffect(() => {
     if (!baseCanvas.current) return;
-    if (!renderContext) return;
 
-    setup({ canvas: baseCanvas.current });
-  }, [renderContext]);
+    setup({
+      canvas: baseCanvas.current,
+      vertexSource: vertex,
+      fragmentSource: fragment,
+    });
+  });
 
   return (
     <main className="">
