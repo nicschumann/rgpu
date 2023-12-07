@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { RPGUTokenizer } from "../src";
 import { TokenKind } from "../src/tokens";
 
-describe("RGPU Lexer", () => {
+describe("RGPU Tokenizer", () => {
   it("should tokenize decimal int literals", () => {
     const lexer = new RPGUTokenizer();
     const testcases = ["1200u", "123", "0", "0u"];
@@ -65,6 +65,24 @@ describe("RGPU Lexer", () => {
     testcases.forEach((testcase) => {
       const r = lexer.tokenize(testcase);
       expect(r).to.deep.equal([{ kind: TokenKind.IDENTIFIER, text: testcase }]);
+    });
+  });
+
+  it("should tokenize assignment", () => {
+    const lexer = new RPGUTokenizer();
+    const testcases = ["var a123 = 100;"];
+
+    testcases.forEach((testcase) => {
+      const r = lexer.tokenize(testcase);
+      expect(r).to.deep.equal([
+        { kind: TokenKind.KEYWORD_VAR, text: "var" },
+        { kind: TokenKind.BLANKSPACE, text: " " },
+        { kind: TokenKind.IDENTIFIER, text: "a123" },
+        { kind: TokenKind.BLANKSPACE, text: " " },
+        { kind: TokenKind.SYM_EQUAL, text: "=" },
+        { kind: TokenKind.BLANKSPACE, text: " " },
+        { kind: TokenKind.DEC_INT_LITERAL, text: "100" },
+      ]);
     });
   });
 });

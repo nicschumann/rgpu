@@ -26,37 +26,55 @@ type TemplateList = {
 };
 
 export class RPGUTokenizer {
-  discovered_template_lists: TemplateList[] = [];
-  pending: UnclosedCandidate[] = [];
   tokens: Token[] = [];
-  nesting_depth: number = 0;
+  source: string | null = null;
+  pattern: RegExp | null = null;
+  index: number = 0;
 
-  tokenize(input: string) {
-    let tokens: Token[] = [];
-    let match: RegExpExecArray | null;
-
-    const pattern = new RegExp(
+  start(source: string) {
+    this.tokens = [];
+    this.source = source;
+    this.index = 0;
+    this.pattern = new RegExp(
       tokenDefinitions.map((a) => `(${a.re})`).join("|"),
       "yu"
     );
+  }
 
-    let index = 0;
+  next(): Token | null {
+    if (this.source === null || this.pattern === null) {
+      return null;
+    }
 
-    while ((match = pattern.exec(input))) {
+    this.pattern.lastIndex = this.index;
+
+    const match = this.pattern.exec(this.source);
+
+    if (match) {
       for (let i = 1; i < match.length; i += 1) {
         if (typeof match[i] !== "undefined") {
           const kind = tokenDefinitions[i - 1].type;
           const token = { kind, text: match[0] };
 
-          tokens.push(token);
-          break;
+          this.index = match.index + match[0].length;
+          this.tokens.push(token);
+
+          return token;
         }
       }
-      index = match.index + match[0].length;
-      pattern.lastIndex = index;
     }
 
-    return tokens;
+    return null;
+  }
+
+  tokenize(source: string) {
+    this.start(source);
+
+    while (this.next() !== null) {
+      continue;
+    }
+
+    return this.tokens;
   }
 }
 
