@@ -8,7 +8,6 @@ import fragment from "./tri.frag.wgsl";
 import { useEffect, useRef, useState } from "react";
 import { setup } from "rgpu";
 import { type IGPUState } from "rgpu/src/types";
-import { randomUUID } from "crypto";
 
 export default function Home() {
   // REF
