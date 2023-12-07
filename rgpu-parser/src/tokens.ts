@@ -56,7 +56,7 @@ export enum TokenKind {
   SYM_COLON, // :
   SYM_COMMA, // ,
   SYM_EQUAL, // =
-  SYM_DOUBLE_EQUAL, // ==
+  SYM_EQUAL_EQUAL, // ==
   SYM_BANG_EQUAL, // !=
   SYM_GREATER, // >
   SYM_GREATER_EQUAL, // >=
@@ -66,7 +66,7 @@ export enum TokenKind {
   SYM_LESS_LESS, // <<
   SYM_PERCENT, // %
   SYM_DASH, // -
-  SYM_DASH_DASH, // -
+  SYM_DASH_DASH, // --
   SYM_DOT, // .
   SYM_PLUS, // +
   SYM_PLUS_PLUS, // ++
@@ -122,8 +122,90 @@ export const tokenDefinitions: TokenData[] = [
     type: TokenKind.KEYWORD_CONST,
     re: "\\bconst\\b",
   },
-
-  // ... more
+  {
+    type: TokenKind.KEYWORD_CONST_ASSERT,
+    re: "\\bconst_assert\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_CONTINUE,
+    re: "\\bcontinue\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_CONTINUING,
+    re: "\\bcontinuing\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_DEFAULT,
+    re: "\\bdefault\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_DIAGNOSTIC,
+    re: "\\bdiagnostic\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_DISCARD,
+    re: "\\bdiscard\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_ELSE,
+    re: "\\belse\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_ENABLE,
+    re: "\\benable\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_FN,
+    re: "\\bfn\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_FOR,
+    re: "\\bfor\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_IF,
+    re: "\\bif\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_DEFAULT,
+    re: "\\bdefault\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_LET,
+    re: "\\blet\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_LOOP,
+    re: "\\bloop\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_OVERRIDE,
+    re: "\\boverride\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_REQUIRES,
+    re: "\\brequires\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_RETURN,
+    re: "\\breturn\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_STRUCT,
+    re: "\\bstruct\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_SWITCH,
+    re: "\\bswitch\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_VAR,
+    re: "\\bvar\\b",
+  },
+  {
+    type: TokenKind.KEYWORD_WHILE,
+    re: "\\bwhile\\b",
+  },
 
   // Literal
   {
@@ -179,6 +261,15 @@ export const tokenDefinitions: TokenData[] = [
     re: "0[iu]?",
   },
 
+  {
+    type: TokenKind.IDENTIFIER,
+    re: "(?:[_\\p{XID_Start}][\\p{XID_Continue}]+)",
+  },
+  {
+    type: TokenKind.IDENTIFIER,
+    re: "(?:[\\p{XID_Start}])",
+  },
+
   // Comments
   {
     type: TokenKind.LINE_COMMENT,
@@ -197,5 +288,199 @@ export const tokenDefinitions: TokenData[] = [
   {
     type: TokenKind.BLANKSPACE,
     re: "[ \\t]+",
+  },
+
+  // Syntactic Tokens
+  // Three Char
+  {
+    type: TokenKind.SYM_GREATER_GREATER_EQUAL,
+    re: ">>=",
+  },
+  {
+    type: TokenKind.SYM_LESS_LESS_EQUAL,
+    re: "<<=",
+  },
+  // Two Char
+  {
+    type: TokenKind.SYM_AMP_AMP,
+    re: "&&",
+  },
+  {
+    type: TokenKind.SYM_DASH_GREATER,
+    re: "->",
+  },
+  {
+    type: TokenKind.SYM_EQUAL_EQUAL,
+    re: "==",
+  },
+  {
+    type: TokenKind.SYM_BANG_EQUAL,
+    re: "!=",
+  },
+  {
+    type: TokenKind.SYM_GREATER_EQUAL,
+    re: ">=",
+  },
+  {
+    type: TokenKind.SYM_LESS_EQUAL,
+    re: "<=",
+  },
+  {
+    type: TokenKind.SYM_GREATER_GREATER,
+    re: ">>",
+  },
+  {
+    type: TokenKind.SYM_LESS_LESS,
+    re: "<<",
+  },
+  {
+    type: TokenKind.SYM_DASH_DASH,
+    re: "--",
+  },
+  {
+    type: TokenKind.SYM_PLUS_PLUS,
+    re: "\\+\\+",
+  },
+  {
+    type: TokenKind.SYM_BAR_BAR,
+    re: "\\|\\|",
+  },
+  {
+    type: TokenKind.SYM_PLUS_EQUAL,
+    re: "\\+=",
+  },
+  {
+    type: TokenKind.SYM_DASH_EQUAL,
+    re: "-=",
+  },
+  {
+    type: TokenKind.SYM_STAR_EQUAL,
+    re: "\\*=",
+  },
+  {
+    type: TokenKind.SYM_SLASH_EQUAL,
+    re: "\\/=",
+  },
+  {
+    type: TokenKind.SYM_PERCENT_EQUAL,
+    re: "%=",
+  },
+  {
+    type: TokenKind.SYM_AMP_EQUAL,
+    re: "&=",
+  },
+  {
+    type: TokenKind.SYM_BAR_EQUAL,
+    re: "\\|=",
+  },
+  {
+    type: TokenKind.SYM_CARAT_EQUAL,
+    re: "\\^=",
+  },
+
+  // single char tokens
+  {
+    type: TokenKind.SYM_AMP,
+    re: "&",
+  },
+  {
+    type: TokenKind.SYM_AT,
+    re: "@",
+  },
+  {
+    type: TokenKind.SYM_SLASH,
+    re: "\\/",
+  },
+  {
+    type: TokenKind.SYM_BANG,
+    re: "!",
+  },
+  {
+    type: TokenKind.SYM_LPAREN,
+    re: "\\[",
+  },
+  {
+    type: TokenKind.SYM_RPAREN,
+    re: "\\]",
+  },
+  {
+    type: TokenKind.SYM_LBRACE,
+    re: "\\{",
+  },
+  {
+    type: TokenKind.SYM_RBRACE,
+    re: "\\}",
+  },
+  {
+    type: TokenKind.SYM_LPAREN,
+    re: "\\(",
+  },
+  {
+    type: TokenKind.SYM_RPAREN,
+    re: "\\)",
+  },
+  {
+    type: TokenKind.SYM_RBRACE,
+    re: "\\}",
+  },
+  {
+    type: TokenKind.SYM_COLON,
+    re: ":",
+  },
+  {
+    type: TokenKind.SYM_COMMA,
+    re: ",",
+  },
+  {
+    type: TokenKind.SYM_EQUAL,
+    re: "=",
+  },
+  {
+    type: TokenKind.SYM_GREATER,
+    re: ">",
+  },
+  {
+    type: TokenKind.SYM_LESS,
+    re: "<",
+  },
+  {
+    type: TokenKind.SYM_PERCENT,
+    re: "%",
+  },
+  {
+    type: TokenKind.SYM_DASH,
+    re: "-",
+  },
+  {
+    type: TokenKind.SYM_DOT,
+    re: "\\.",
+  },
+  {
+    type: TokenKind.SYM_PLUS,
+    re: "\\+",
+  },
+  {
+    type: TokenKind.SYM_BAR,
+    re: "\\|",
+  },
+  {
+    type: TokenKind.SYM_SEMICOLON,
+    re: ":",
+  },
+  {
+    type: TokenKind.SYM_STAR,
+    re: "\\*",
+  },
+  {
+    type: TokenKind.SYM_TILDE,
+    re: "~",
+  },
+  {
+    type: TokenKind.SYM_UNDERSCORE,
+    re: "_",
+  },
+  {
+    type: TokenKind.SYM_CARAT,
+    re: "\\^",
   },
 ];

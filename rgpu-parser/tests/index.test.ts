@@ -26,4 +26,45 @@ describe("RGPU Lexer", () => {
       ]);
     });
   });
+
+  it("should tokenize line comments and whitespace", () => {
+    const lexer = new RPGUTokenizer();
+    const line_testcases = ["// this is a comment"];
+
+    line_testcases.forEach((testcase) => {
+      const r = lexer.tokenize(testcase);
+      expect(r).to.deep.equal([
+        { kind: TokenKind.LINE_COMMENT, text: testcase },
+      ]);
+    });
+
+    const block_testcases = ["/*** this a block comment * */"];
+
+    block_testcases.forEach((testcase) => {
+      const r = lexer.tokenize(testcase);
+      expect(r).to.deep.equal([
+        { kind: TokenKind.BLOCK_COMMENT, text: testcase },
+      ]);
+    });
+
+    const line_with_break_and_whitespace = "   //a comment\n   ";
+
+    const r = lexer.tokenize(line_with_break_and_whitespace);
+    expect(r).to.deep.equal([
+      { kind: TokenKind.BLANKSPACE, text: "   " },
+      { kind: TokenKind.LINE_COMMENT, text: "//a comment" },
+      { kind: TokenKind.LINEBREAK, text: "\n" },
+      { kind: TokenKind.BLANKSPACE, text: "   " },
+    ]);
+  });
+
+  it("should tokenize identifiers", () => {
+    const lexer = new RPGUTokenizer();
+    const testcases = ["_identifier", "a123"];
+
+    testcases.forEach((testcase) => {
+      const r = lexer.tokenize(testcase);
+      expect(r).to.deep.equal([{ kind: TokenKind.IDENTIFIER, text: testcase }]);
+    });
+  });
 });

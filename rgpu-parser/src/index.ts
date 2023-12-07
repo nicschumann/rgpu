@@ -37,7 +37,7 @@ export class RPGUTokenizer {
 
     const pattern = new RegExp(
       tokenDefinitions.map((a) => `(${a.re})`).join("|"),
-      "y"
+      "yu"
     );
 
     let index = 0;
