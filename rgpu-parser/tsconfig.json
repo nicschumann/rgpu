@@ -1,0 +1,6 @@
+{
+  "compilerOptions": {
+    "types": ["@webgpu/types", "mocha", "chai"],
+    "lib": ["ESNext", "DOM"]
+  }
+}

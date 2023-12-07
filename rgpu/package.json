@@ -7,6 +7,7 @@
   "author": "nicschumann",
   "license": "MIT",
   "private": true,
+  "packageManager": "yarn@4.0.2",
   "scripts": {
     "build:dist": "tsup --config tsup.config.ts",
     "build:test": "tsup --config tsup.test.config.ts",

@@ -1,0 +1,21 @@
+{
+  "name": "rgpu-parser",
+  "version": "0.0.1",
+  "description": "WGSL Parser",
+  "main": "src/index.ts",
+  "repository": "https://github.com/nicschumann/rgpu",
+  "author": "nicschumann",
+  "license": "MIT",
+  "private": true,
+  "packageManager": "yarn@4.0.2",
+  "scripts": {
+    "test": "mocha"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "chai": "^4.3.10",
+    "mocha": "^10.2.0",
+    "ts-node": "^10.9.1"
+  }
+}
