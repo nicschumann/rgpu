@@ -91,8 +91,8 @@ export enum TokenKind {
   SYM_LESS_LESS_EQUAL, // <<=
 
   // Tokens: Template
-  TEMPLATE_ARG_END, // > (disambiguated by template disambiguation)
-  TEMPLATE_ARG_START, // < (disambiguated by template disambiguation)
+  TEMPLATE_LIST_END, // > (disambiguated by template disambiguation)
+  TEMPLATE_LIST_START, // < (disambiguated by template disambiguation)
   TEMPLATE_DISAMBIGUATE, // non-textual; tells parser to scan for templates
 
   // Tokens: Identifiers
