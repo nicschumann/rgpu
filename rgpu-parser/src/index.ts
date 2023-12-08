@@ -7,12 +7,20 @@ enum SyntaxKind {}
 type Token = {
   kind: TokenKind;
   text: string;
+  precedence: number;
 };
 
 type Node = {
-  kind: SyntaxKind;
-  text_len: number;
-  children: Node | Token;
+  kind: TokenKind;
+  children: (Node | Token)[];
+};
+
+const isNode = (value: any): value is Node => {
+  return typeof value.children !== "undefined";
+};
+
+const isToken = (value: any): value is Node => {
+  return typeof value.text === "string";
 };
 
 type UnclosedCandidate = {
@@ -66,8 +74,13 @@ export class RPGUTokenizer {
     if (match) {
       for (let i = 1; i < match.length; i += 1) {
         if (typeof match[i] !== "undefined") {
-          const kind = tokenDefinitions[i - 1].type;
-          const token = { kind, text: match[0] };
+          const def = tokenDefinitions[i - 1];
+          const kind = def.type;
+          const token = {
+            kind,
+            text: match[0],
+            precedence: def.right_precedence || 0,
+          };
 
           return token;
         }
@@ -137,7 +150,11 @@ export class RPGUTokenizer {
             start_position: candidate.start_position,
             end_position: this.tokens.length,
           });
-          this.consume_token({ kind: TokenKind.SYM_GREATER, text: ">" });
+          this.consume_token({
+            kind: TokenKind.SYM_GREATER,
+            text: ">",
+            precedence: 0,
+          });
         } else {
           this.consume_token(token);
         }
@@ -213,4 +230,100 @@ export class RPGUTokenizer {
   }
 }
 
-export class RGPUParser {}
+export class RGPUExprParser {
+  private tokens: Token[] = [];
+  private position: number = 0;
+  private current: Token;
+
+  private next() {
+    // this should skip past trivia (for now)
+    // or push them onto a stack that we can keep
+    // for adding into the CST.
+    const token = this.current;
+
+    this.position += 1;
+    if (this.position < this.tokens.length) {
+      this.current = this.tokens[this.position];
+    }
+
+    return token;
+  }
+
+  private expect(kind: TokenKind): [boolean, Token] {
+    if (this.current && this.current.kind === kind) {
+      const token = this.next();
+      return [true, token];
+    } else {
+      return [false, { kind: TokenKind.ERROR, text: "", precedence: 0 }];
+    }
+  }
+
+  private precedence(): number {
+    return this.current.precedence;
+  }
+
+  private parse_prefix(token: Token): Node | Token {
+    // aka "nud"
+
+    // id
+    if (token.kind === TokenKind.IDENTIFIER) {
+      return token;
+    }
+
+    // parens
+    if (token.kind === TokenKind.SYM_LPAREN) {
+      const expr = this.expr();
+      const [matched, r_token] = this.expect(TokenKind.SYM_RPAREN);
+      const kind = matched ? expr.kind : TokenKind.ERROR;
+      // handles the case where the paren is unmatched...
+
+      if (isNode(expr)) {
+        expr.kind = kind;
+        expr.children.unshift(token);
+        expr.children.push(r_token);
+        return expr;
+      } else if (isToken(expr)) {
+        return {
+          kind,
+          children: [token, expr, r_token],
+        };
+      }
+    }
+  }
+
+  private parse_infix(left: Token | Node, token: Token): Token | Node {
+    // aka "led"
+
+    // binops
+    if (
+      token.kind === TokenKind.SYM_PLUS ||
+      token.kind === TokenKind.SYM_DASH ||
+      token.kind === TokenKind.SYM_STAR ||
+      token.kind === TokenKind.SYM_SLASH
+    ) {
+      const right = this.expr(token.precedence);
+      return { kind: token.kind, children: [left, token, right] };
+    }
+  }
+
+  private expr(precendence: number = 0): Token | Node {
+    const token = this.next();
+
+    let left = this.parse_prefix(token);
+
+    while (precendence < this.precedence()) {
+      const token = this.next();
+      left = this.parse_infix(left, token);
+    }
+
+    return left;
+  }
+
+  parse(tokens: Token[]) {
+    this.tokens = tokens;
+    this.position = 0;
+    this.current = this.tokens[this.position];
+
+    return this.expr();
+  }
+}

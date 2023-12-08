@@ -97,11 +97,16 @@ export enum TokenKind {
 
   // Tokens: Identifiers
   IDENTIFIER,
+
+  // Tokens: Errors
+  ERROR,
 }
 
 export type TokenData = {
   type: TokenKind;
   re: string;
+  left_precedence?: number;
+  right_precedence?: number;
 };
 
 export const tokenDefinitions: TokenData[] = [
@@ -390,6 +395,8 @@ export const tokenDefinitions: TokenData[] = [
   {
     type: TokenKind.SYM_SLASH,
     re: "\\/",
+    left_precedence: 2,
+    right_precedence: 2,
   },
   {
     type: TokenKind.SYM_BANG,
@@ -450,6 +457,8 @@ export const tokenDefinitions: TokenData[] = [
   {
     type: TokenKind.SYM_DASH,
     re: "-",
+    left_precedence: 1,
+    right_precedence: 1,
   },
   {
     type: TokenKind.SYM_DOT,
@@ -458,6 +467,8 @@ export const tokenDefinitions: TokenData[] = [
   {
     type: TokenKind.SYM_PLUS,
     re: "\\+",
+    left_precedence: 1,
+    right_precedence: 1,
   },
   {
     type: TokenKind.SYM_BAR,
@@ -470,6 +481,8 @@ export const tokenDefinitions: TokenData[] = [
   {
     type: TokenKind.SYM_STAR,
     re: "\\*",
+    left_precedence: 2,
+    right_precedence: 2,
   },
   {
     type: TokenKind.SYM_TILDE,
