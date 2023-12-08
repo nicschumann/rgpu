@@ -233,7 +233,19 @@ export class RPGUTokenizer {
 export class RGPUExprParser {
   private tokens: Token[] = [];
   private position: number = 0;
-  private current: Token;
+  private current: Token | null;
+
+  private check(kind: TokenKind): boolean {
+    return this.current !== null && this.current.kind === kind;
+  }
+
+  private precedence(): number {
+    if (this.current === null) {
+      return 0;
+    }
+
+    return this.current.precedence;
+  }
 
   private next() {
     // this should skip past trivia (for now)
@@ -242,24 +254,23 @@ export class RGPUExprParser {
     const token = this.current;
 
     this.position += 1;
+
     if (this.position < this.tokens.length) {
       this.current = this.tokens[this.position];
+    } else {
+      this.current = null;
     }
 
     return token;
   }
 
   private expect(kind: TokenKind): [boolean, Token] {
-    if (this.current && this.current.kind === kind) {
+    if (this.check(kind)) {
       const token = this.next();
       return [true, token];
     } else {
       return [false, { kind: TokenKind.ERROR, text: "", precedence: 0 }];
     }
-  }
-
-  private precedence(): number {
-    return this.current.precedence;
   }
 
   private parse_prefix(token: Token): Node | Token {
@@ -276,18 +287,26 @@ export class RGPUExprParser {
       const [matched, r_token] = this.expect(TokenKind.SYM_RPAREN);
       const kind = matched ? expr.kind : TokenKind.ERROR;
       // handles the case where the paren is unmatched...
+      return this.close_paren_block(expr, kind, token, r_token);
+    }
+  }
 
-      if (isNode(expr)) {
-        expr.kind = kind;
-        expr.children.unshift(token);
-        expr.children.push(r_token);
-        return expr;
-      } else if (isToken(expr)) {
-        return {
-          kind,
-          children: [token, expr, r_token],
-        };
-      }
+  private close_paren_block(
+    expr: Token | Node,
+    kind: TokenKind,
+    l_token: Token,
+    r_token: Token
+  ): Node {
+    if (isNode(expr)) {
+      expr.kind = kind;
+      expr.children.unshift(l_token);
+      expr.children.push(r_token);
+      return expr;
+    } else if (isToken(expr)) {
+      return {
+        kind,
+        children: [l_token, expr, r_token],
+      };
     }
   }
 
@@ -304,6 +323,40 @@ export class RGPUExprParser {
       const right = this.expr(token.precedence);
       return { kind: token.kind, children: [left, token, right] };
     }
+
+    // function call
+    if (token.kind === TokenKind.SYM_LPAREN) {
+      let args: Node = { kind: TokenKind.AST_FUNCTION_ARGS, children: [] };
+
+      if (!this.check(TokenKind.SYM_RPAREN)) {
+        let more_arguments = true;
+        // build the argument list here...
+        while (more_arguments) {
+          let arg_expr = this.expr();
+          args.children.push(arg_expr);
+
+          let [matches, token] = this.expect(TokenKind.SYM_COMMA);
+          if (matches) {
+            args.children.push(token);
+          } else {
+            more_arguments = false;
+          }
+        }
+      }
+
+      const [matches, r_token] = this.expect(TokenKind.SYM_RPAREN);
+      console.log(matches);
+      args = this.close_paren_block(
+        args,
+        matches ? args.kind : TokenKind.ERROR,
+        token,
+        r_token
+      );
+      return {
+        kind: TokenKind.AST_FUNCTION_CALL,
+        children: [left, args],
+      };
+    }
   }
 
   private expr(precendence: number = 0): Token | Node {
@@ -311,7 +364,11 @@ export class RGPUExprParser {
 
     let left = this.parse_prefix(token);
 
-    while (precendence < this.precedence()) {
+    while (
+      this.current &&
+      (precendence < this.precedence() || // in an expression
+        this.current.kind === TokenKind.SYM_LPAREN) // at a function call?
+    ) {
       const token = this.next();
       left = this.parse_infix(left, token);
     }

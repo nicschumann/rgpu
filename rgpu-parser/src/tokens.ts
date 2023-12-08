@@ -98,6 +98,10 @@ export enum TokenKind {
   // Tokens: Identifiers
   IDENTIFIER,
 
+  // AST Tags
+  AST_FUNCTION_CALL,
+  AST_FUNCTION_ARGS,
+
   // Tokens: Errors
   ERROR,
 }
