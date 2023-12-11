@@ -77,7 +77,7 @@ export class RPGUTokenizer {
     let depth: number = 0;
 
     while ((token = this.next_token()) !== null) {
-      if (token.kind === TokenKind.IDENTIFIER) {
+      if (token.kind === TokenKind.SYM_IDENTIFIER) {
         this.consume_token(token);
         // We need to check for template lists:
         // [as here](https://www.w3.org/TR/WGSL/#template-lists-sec)
@@ -194,9 +194,9 @@ export class RPGUTokenizer {
     for (let i = 0; i < this.template_lists.length; i += 1) {
       let template_list = this.template_lists[i];
       this.tokens[template_list.start_position].kind =
-        TokenKind.TEMPLATE_LIST_START;
+        TokenKind.SYM_TEMPLATE_LIST_START;
       this.tokens[template_list.end_position].kind =
-        TokenKind.TEMPLATE_LIST_END;
+        TokenKind.SYM_TEMPLATE_LIST_END;
     }
 
     return this.tokens;

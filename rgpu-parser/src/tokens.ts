@@ -91,12 +91,11 @@ export enum TokenKind {
   SYM_LESS_LESS_EQUAL, // <<=
 
   // Tokens: Template
-  TEMPLATE_LIST_START, // < (disambiguated by template disambiguation)
-  TEMPLATE_LIST_END, // > (disambiguated by template disambiguation)
-  TEMPLATE_DISAMBIGUATE, // non-textual; tells parser to scan for templates
+  SYM_TEMPLATE_LIST_START, // < (disambiguated by template disambiguation)
+  SYM_TEMPLATE_LIST_END, // > (disambiguated by template disambiguation)
 
   // Tokens: Identifiers
-  IDENTIFIER,
+  SYM_IDENTIFIER,
 
   // AST Tags
   AST_FUNCTION_CALL,
@@ -106,7 +105,7 @@ export enum TokenKind {
   AST_TEMPLATE_ARGS,
 
   // Tokens: Errors
-  ERROR,
+  ERR_ERROR,
 }
 
 export type UnaryOperatorTokenKind =
@@ -117,6 +116,7 @@ export type UnaryOperatorTokenKind =
   | TokenKind.SYM_AMP; // 10
 
 export type BinaryOperatorTokenKind =
+  | TokenKind.SYM_DOT
   | TokenKind.SYM_STAR // 9
   | TokenKind.SYM_SLASH // 9
   | TokenKind.SYM_PERCENT // 9
@@ -299,11 +299,11 @@ export const tokenDefinitions: TokenData[] = [
   },
 
   {
-    type: TokenKind.IDENTIFIER,
+    type: TokenKind.SYM_IDENTIFIER,
     re: "(?:[_\\p{XID_Start}][\\p{XID_Continue}]+)",
   },
   {
-    type: TokenKind.IDENTIFIER,
+    type: TokenKind.SYM_IDENTIFIER,
     re: "(?:[\\p{XID_Start}])",
   },
 

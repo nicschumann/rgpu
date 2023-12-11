@@ -68,7 +68,9 @@ describe("RGPU Tokenizer", () => {
 
     testcases.forEach((testcase) => {
       const r = lexer.tokenize_source(testcase).map(normalize);
-      expect(r).to.deep.equal([{ kind: TokenKind.IDENTIFIER, text: testcase }]);
+      expect(r).to.deep.equal([
+        { kind: TokenKind.SYM_IDENTIFIER, text: testcase },
+      ]);
     });
   });
 
@@ -81,7 +83,7 @@ describe("RGPU Tokenizer", () => {
       expect(r).to.deep.equal([
         { kind: TokenKind.KEYWORD_VAR, text: "var" },
         { kind: TokenKind.BLANKSPACE, text: " " },
-        { kind: TokenKind.IDENTIFIER, text: "a123" },
+        { kind: TokenKind.SYM_IDENTIFIER, text: "a123" },
         { kind: TokenKind.BLANKSPACE, text: " " },
         { kind: TokenKind.SYM_EQUAL, text: "=" },
         { kind: TokenKind.BLANKSPACE, text: " " },
@@ -95,29 +97,29 @@ describe("RGPU Tokenizer", () => {
 
     const r1 = lexer.tokenize_source("a<a,b<f32>,>").map(normalize);
     expect(r1).to.deep.equal([
-      { kind: TokenKind.IDENTIFIER, text: "a" },
-      { kind: TokenKind.TEMPLATE_LIST_START, text: "<" },
-      { kind: TokenKind.IDENTIFIER, text: "a" },
+      { kind: TokenKind.SYM_IDENTIFIER, text: "a" },
+      { kind: TokenKind.SYM_TEMPLATE_LIST_START, text: "<" },
+      { kind: TokenKind.SYM_IDENTIFIER, text: "a" },
       { kind: TokenKind.SYM_COMMA, text: "," },
-      { kind: TokenKind.IDENTIFIER, text: "b" },
-      { kind: TokenKind.TEMPLATE_LIST_START, text: "<" },
-      { kind: TokenKind.IDENTIFIER, text: "f32" },
-      { kind: TokenKind.TEMPLATE_LIST_END, text: ">" },
+      { kind: TokenKind.SYM_IDENTIFIER, text: "b" },
+      { kind: TokenKind.SYM_TEMPLATE_LIST_START, text: "<" },
+      { kind: TokenKind.SYM_IDENTIFIER, text: "f32" },
+      { kind: TokenKind.SYM_TEMPLATE_LIST_END, text: ">" },
       { kind: TokenKind.SYM_COMMA, text: "," },
-      { kind: TokenKind.TEMPLATE_LIST_END, text: ">" },
+      { kind: TokenKind.SYM_TEMPLATE_LIST_END, text: ">" },
     ]);
 
     const r2 = lexer.tokenize_source("a<b || c>d").map(normalize);
     expect(r2).to.deep.equal([
-      { kind: TokenKind.IDENTIFIER, text: "a" },
+      { kind: TokenKind.SYM_IDENTIFIER, text: "a" },
       { kind: TokenKind.SYM_LESS, text: "<" },
-      { kind: TokenKind.IDENTIFIER, text: "b" },
+      { kind: TokenKind.SYM_IDENTIFIER, text: "b" },
       { kind: TokenKind.BLANKSPACE, text: " " },
       { kind: TokenKind.SYM_BAR_BAR, text: "||" },
       { kind: TokenKind.BLANKSPACE, text: " " },
-      { kind: TokenKind.IDENTIFIER, text: "c" },
+      { kind: TokenKind.SYM_IDENTIFIER, text: "c" },
       { kind: TokenKind.SYM_GREATER, text: ">" },
-      { kind: TokenKind.IDENTIFIER, text: "d" },
+      { kind: TokenKind.SYM_IDENTIFIER, text: "d" },
     ]);
   });
 });

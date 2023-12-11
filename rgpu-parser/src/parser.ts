@@ -76,6 +76,7 @@ const unary_operator_precedence: { [key in UnaryOperatorTokenKind]: number } = {
 
 const binary_operator_precedence: { [key in BinaryOperatorTokenKind]: number } =
   {
+    [TokenKind.SYM_DOT]: 11,
     [TokenKind.SYM_STAR]: 9,
     [TokenKind.SYM_SLASH]: 9,
     [TokenKind.SYM_PERCENT]: 9,
@@ -121,6 +122,7 @@ const unary_op_types: Set<TokenKind> = new Set([
 ]);
 
 const binary_op_types: Set<TokenKind> = new Set([
+  TokenKind.SYM_DOT,
   TokenKind.SYM_STAR,
   TokenKind.SYM_SLASH,
   TokenKind.SYM_PERCENT,
@@ -220,7 +222,7 @@ export class RGPUExprParser {
       return {
         matched: false,
         node: {
-          kind: TokenKind.ERROR,
+          kind: TokenKind.ERR_ERROR,
           text: "",
           leading_trivia: [],
           trailing_trivia: [],
@@ -277,7 +279,10 @@ export class RGPUExprParser {
 
   private parse_prefix(token: Token): SyntaxNode {
     // IDENTIFIERs && Literal Types
-    if (token.kind === TokenKind.IDENTIFIER || literal_types.has(token.kind)) {
+    if (
+      token.kind === TokenKind.SYM_IDENTIFIER ||
+      literal_types.has(token.kind)
+    ) {
       return {
         kind: token.kind,
         text: token.text,
@@ -316,7 +321,7 @@ export class RGPUExprParser {
         TokenKind.SYM_RPAREN,
         false
       );
-      const kind = matched ? expr.kind : TokenKind.ERROR;
+      const kind = matched ? expr.kind : TokenKind.ERR_ERROR;
       // handles the case where the paren is unmatched...
       return this.finish_block(expr, kind, l_node, r_node);
     }
@@ -372,7 +377,7 @@ export class RGPUExprParser {
     const { matched, node: r_node } = this.accept(closing_token_kind, true);
     args = this.finish_block(
       args,
-      matched ? args.kind : TokenKind.ERROR,
+      matched ? args.kind : TokenKind.ERR_ERROR,
       l_node,
       r_node
     );
@@ -414,19 +419,19 @@ export class RGPUExprParser {
         TokenKind.SYM_RPAREN,
         TokenKind.AST_FUNCTION_CALL,
         TokenKind.AST_FUNCTION_ARGS,
-        TokenKind.ERROR
+        TokenKind.ERR_ERROR
       );
     }
 
     // Handle Multi-argument Template List
-    if (token.kind === TokenKind.TEMPLATE_LIST_START) {
+    if (token.kind === TokenKind.SYM_TEMPLATE_LIST_START) {
       return this.parse_call_expression(
         left,
         token,
-        TokenKind.TEMPLATE_LIST_END,
+        TokenKind.SYM_TEMPLATE_LIST_END,
         TokenKind.AST_TEMPLATE_IDENTIFIER,
         TokenKind.AST_TEMPLATE_ARGS,
-        TokenKind.ERROR
+        TokenKind.ERR_ERROR
       );
     }
   }
@@ -447,8 +452,8 @@ export class RGPUExprParser {
         this.next_token().kind === TokenKind.SYM_LPAREN ||
         // the next token is a bracket, indicating an array index
         this.next_token().kind === TokenKind.SYM_LBRACKET ||
-        // this current token is an identifier, and the next token starts a template list
-        this.next_token().kind === TokenKind.TEMPLATE_LIST_START)
+        // the next token starts a template list
+        this.next_token().kind === TokenKind.SYM_TEMPLATE_LIST_START)
     ) {
       let { current, trivia: trailing_trivia } = this.advance();
       left.trailing_trivia.push(...trailing_trivia);
