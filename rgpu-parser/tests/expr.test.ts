@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { RPGUTokenizer } from "../src/tokenizer";
+import { RPGUTokenizer, serialize_tokens } from "../src/tokenizer";
 import { RGPUExprParser, serialize_nodes, simplify_cst } from "../src/parser";
 
 describe("RGPU Expression Parser", () => {
@@ -67,7 +67,7 @@ describe("RGPU Expression Parser", () => {
       const cst = parser.parse(tokens);
       const serialized = serialize_nodes(cst);
 
-      console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
 
       expect(serialized).to.deep.equal(testcase);
     });
@@ -173,6 +173,34 @@ describe("RGPU Expression Parser", () => {
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
 
       expect(serialized).to.deep.equal(testcase);
+    });
+  });
+
+  it("should parse error nodes", () => {
+    const lexer = new RPGUTokenizer();
+    const parser = new RGPUExprParser();
+    const testcases = [
+      { input: "a(32", parse: "a(32", remaining: "" },
+      {
+        input: "id(32 /** comment ***/ ;",
+        parse: "id(32 /** comment ***/ ",
+        remaining: ";",
+      },
+    ];
+
+    testcases.forEach(({ input, parse, remaining }) => {
+      const tokens = lexer.tokenize_source(input);
+
+      // if you need to debug token stream...
+      // console.log(tokens);
+
+      const cst = parser.parse(tokens);
+      const { tokens: remaining_tokens } = parser.remaining();
+
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
+
+      expect(serialize_nodes(cst)).to.deep.equal(parse);
+      expect(serialize_tokens(remaining_tokens)).to.deep.equal(remaining);
     });
   });
 });

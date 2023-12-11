@@ -88,6 +88,7 @@ describe("RGPU Tokenizer", () => {
         { kind: TokenKind.SYM_EQUAL, text: "=" },
         { kind: TokenKind.BLANKSPACE, text: " " },
         { kind: TokenKind.DEC_INT_LITERAL, text: "100" },
+        { kind: TokenKind.SYM_SEMICOLON, text: ";" },
       ]);
     });
   });

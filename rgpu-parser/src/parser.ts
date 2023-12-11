@@ -36,6 +36,11 @@ type AcceptData = {
   node: SyntaxNode;
 };
 
+type RemainingData = {
+  index: number;
+  tokens: Token[];
+};
+
 export function serialize_nodes(syntax: SyntaxNode): string {
   const pre = syntax.leading_trivia.map((v) => v.text).join("");
   const post = syntax.trailing_trivia.map((v) => v.text).join("");
@@ -151,7 +156,11 @@ export class RGPUExprParser {
 
   // walks forward from an index, and returns a new index pointing to a non-trivial token
   // or -1 if we reached the end of the stream
-  private skip_trivia(from: number, consuming: boolean): TriviaData {
+  private skip_trivia(
+    from: number,
+    consuming: boolean,
+    direction: -1 | 1 = 1
+  ): TriviaData {
     const trivia: Token[] = [];
     let new_index = from;
     while (
@@ -162,7 +171,7 @@ export class RGPUExprParser {
         trivia.push(this.tokens[new_index]);
         this.tokens[new_index].seen = true;
       }
-      new_index += 1;
+      new_index += direction;
     }
 
     return {
@@ -253,6 +262,20 @@ export class RGPUExprParser {
     };
   }
 
+  private retreat() {
+    // updates current and next one step.
+    // pushes the trivia between current and next onto the stack.
+    this.next_position = this.current_position;
+
+    const { new_index: current_index } = this.skip_trivia(
+      this.next_position - 1,
+      false,
+      -1
+    );
+
+    this.current_position = current_index;
+  }
+
   private finish_block(
     expr: SyntaxNode,
     kind: TokenKind,
@@ -278,6 +301,18 @@ export class RGPUExprParser {
   }
 
   private parse_prefix(token: Token): SyntaxNode {
+    // we expected an expression, but didn't get one
+    if (!token) {
+      // missing token in the stream /
+      // premature end of stream
+      return {
+        kind: TokenKind.ERR_ERROR,
+        text: "",
+        leading_trivia: [],
+        trailing_trivia: [],
+      };
+    }
+
     // IDENTIFIERs && Literal Types
     if (
       token.kind === TokenKind.SYM_IDENTIFIER ||
@@ -325,6 +360,16 @@ export class RGPUExprParser {
       // handles the case where the paren is unmatched...
       return this.finish_block(expr, kind, l_node, r_node);
     }
+
+    // Unrecognized token in expression
+    // we need to put the token back
+    this.retreat();
+    return {
+      kind: TokenKind.ERR_ERROR,
+      text: "",
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
   }
 
   private parse_call_expression(
@@ -485,5 +530,12 @@ export class RGPUExprParser {
   parse(tokens: Token[]): SyntaxNode {
     this.reset(tokens);
     return this.expr();
+  }
+
+  remaining(): RemainingData {
+    return {
+      index: this.next_position,
+      tokens: this.tokens.slice(this.next_position),
+    };
   }
 }

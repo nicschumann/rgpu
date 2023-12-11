@@ -9,6 +9,10 @@ type UnclosedCandidate = {
   depth: number; // nesting depth at position
 };
 
+export function serialize_tokens(tokens: Token[]): string {
+  return tokens.map((t) => t.text).join("");
+}
+
 export class RPGUTokenizer {
   tokens: Token[] = [];
   template_lists: TemplateList[] = [];

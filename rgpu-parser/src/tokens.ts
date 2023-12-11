@@ -505,7 +505,7 @@ export const tokenDefinitions: TokenData[] = [
   },
   {
     type: TokenKind.SYM_SEMICOLON,
-    re: ":",
+    re: ";",
   },
   {
     type: TokenKind.SYM_STAR,
