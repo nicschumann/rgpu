@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { RPGUTokenizer } from "../src";
+import { RPGUTokenizer } from "../src/tokenizer";
 import { TokenKind } from "../src/tokens";
 import { normalize } from "./lib";
 
@@ -93,7 +93,7 @@ describe("RGPU Tokenizer", () => {
   it("should tokenize template lists", () => {
     const lexer = new RPGUTokenizer();
 
-    const r1 = lexer.tokenize_source("a<a,b<f32>>").map(normalize);
+    const r1 = lexer.tokenize_source("a<a,b<f32>,>").map(normalize);
     expect(r1).to.deep.equal([
       { kind: TokenKind.IDENTIFIER, text: "a" },
       { kind: TokenKind.TEMPLATE_LIST_START, text: "<" },
@@ -103,6 +103,7 @@ describe("RGPU Tokenizer", () => {
       { kind: TokenKind.TEMPLATE_LIST_START, text: "<" },
       { kind: TokenKind.IDENTIFIER, text: "f32" },
       { kind: TokenKind.TEMPLATE_LIST_END, text: ">" },
+      { kind: TokenKind.SYM_COMMA, text: "," },
       { kind: TokenKind.TEMPLATE_LIST_END, text: ">" },
     ]);
 

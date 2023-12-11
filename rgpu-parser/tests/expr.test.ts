@@ -1,19 +1,15 @@
 import { expect } from "chai";
 import { RPGUTokenizer } from "../src/tokenizer";
-import {
-  RGPUExprParser2 as RGPUExprParser,
-  serialize_nodes,
-  simplify_cst,
-} from "../src/parser";
+import { RGPUExprParser, serialize_nodes, simplify_cst } from "../src/parser";
 
 describe("RGPU Expression Parser", () => {
   it("should parse arithmetic expressions", () => {
     const lexer = new RPGUTokenizer();
     const parser = new RGPUExprParser();
     const testcases = [
-      " a + b     /** this is a big comment test */  / c  // and another comment",
+      " a + 1.0     /** weird constant */  / 1e-3  // and another comment",
       " a * b / c",
-      " (a + b) * c  // this is a line comment \n",
+      " (a + b) * 0f  // this is a line comment \n",
       "(a + b) * (c - d)",
       "(a + b * (c - d)",
     ];
@@ -40,7 +36,7 @@ describe("RGPU Expression Parser", () => {
       "a()",
       "a(b, c + d, )",
       "   f(a+b , c*d/ ident) /** comment **/",
-      "func(   main(), other(a-c, c)   )",
+      "func(   main(), other(a-c, 0.000232 )   )",
     ];
 
     testcases.forEach((testcase) => {

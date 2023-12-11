@@ -62,7 +62,7 @@ export function simplify_cst(syntax: SyntaxNode): SimplifiedSyntaxNode {
   }
 }
 
-export class RGPUExprParser2 {
+export class RGPUExprParser {
   // token stream from lexer
   private tokens: Token[] = [];
   private current_position: number = -1; // always points to non-trivial token
@@ -74,6 +74,14 @@ export class RGPUExprParser2 {
     TokenKind.BLOCK_COMMENT,
     TokenKind.LINEBREAK,
     TokenKind.LINE_COMMENT,
+  ]);
+
+  private literal_types: Set<TokenKind> = new Set([
+    TokenKind.BOOL_LITERAL,
+    TokenKind.DEC_INT_LITERAL,
+    TokenKind.HEX_INT_LITERAL,
+    TokenKind.DEC_FLOAT_LITERAL,
+    TokenKind.HEX_FLOAT_LITERAL,
   ]);
 
   // walks forward from an index, and returns a new index pointing to a non-trivial token
@@ -204,10 +212,13 @@ export class RGPUExprParser2 {
   }
 
   private parse_prefix(token: Token): SyntaxNode {
-    // IDENTIFIER
-    if (token.kind === TokenKind.IDENTIFIER) {
+    // IDENTIFIERs && Literal Types
+    if (
+      token.kind === TokenKind.IDENTIFIER ||
+      this.literal_types.has(token.kind)
+    ) {
       return {
-        kind: TokenKind.IDENTIFIER,
+        kind: token.kind,
         text: token.text,
         leading_trivia: [],
         trailing_trivia: [],
@@ -330,7 +341,6 @@ export class RGPUExprParser2 {
       (precedence < this.precedence() ||
         this.next_token().kind === TokenKind.SYM_LPAREN)
     ) {
-      console.log("parsing infix");
       let { current, trivia: trailing_trivia } = this.advance();
       left.trailing_trivia.push(...trailing_trivia);
       left = this.parse_infix(left, current);
@@ -351,210 +361,6 @@ export class RGPUExprParser2 {
 
   parse(tokens: Token[]) {
     this.reset(tokens);
-    return this.expr();
-  }
-}
-
-/**
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- */
-export class RGPUExprParser {
-  private tokens: Token[] = [];
-  private position: number = 0;
-  private current_token: Token | null;
-  private next_token: Token | null;
-  private trivia_types: Set<TokenKind> = new Set([
-    TokenKind.BLANKSPACE,
-    TokenKind.BLOCK_COMMENT,
-    TokenKind.LINEBREAK,
-    TokenKind.LINE_COMMENT,
-  ]);
-
-  private check(kind: TokenKind): boolean {
-    return this.current_token !== null && this.current_token.kind === kind;
-  }
-
-  private precedence(): number {
-    if (this.current_token === null) {
-      return 0;
-    }
-
-    return this.current_token.precedence;
-  }
-
-  private consume_trivia(): Token[] {
-    let trivia: Token[] = [];
-    if (
-      this.position < this.tokens.length &&
-      this.trivia_types.has(this.tokens[this.position].kind)
-    ) {
-      trivia.push(this.tokens[this.position]);
-      this.position += 1;
-    }
-
-    if (this.position < this.tokens.length) {
-      this.current_token = this.tokens[this.position];
-    } else {
-      this.current_token = null;
-    }
-
-    return trivia;
-  }
-
-  private advance() {
-    // this should skip past trivia (for now)
-    // or push them onto a stack that we can keep
-    // for adding into the CST.
-    const token = this.current_token;
-
-    this.position += 1;
-
-    if (this.position < this.tokens.length) {
-      this.current_token = this.tokens[this.position];
-    } else {
-      this.current_token = null;
-    }
-
-    return token;
-  }
-
-  private expect(kind: TokenKind): [boolean, Token] {
-    if (this.check(kind)) {
-      const token = this.advance();
-      return [true, token];
-    } else {
-      return [false, { kind: TokenKind.ERROR, text: "", precedence: 0 }];
-    }
-  }
-
-  private parse_prefix(token: Token): Node | Token {
-    // aka "nud"
-
-    // id
-    if (token.kind === TokenKind.IDENTIFIER) {
-      return token;
-    }
-
-    // parens
-    // if (token.kind === TokenKind.SYM_LPAREN) {
-    //   const expr = this.expr();
-    //   const [matched, r_token] = this.expect(TokenKind.SYM_RPAREN);
-    //   const kind = matched ? expr.kind : TokenKind.ERROR;
-    //   // handles the case where the paren is unmatched...
-    //   return this.close_paren_block(expr, kind, token, r_token);
-    // }
-  }
-
-  private close_paren_block(
-    expr: Token | Node,
-    kind: TokenKind,
-    l_token: Token,
-    r_token: Token
-  ): Node {
-    if (isNode(expr)) {
-      expr.kind = kind;
-      expr.children.unshift(l_token);
-      expr.children.push(r_token);
-      return expr;
-    } else if (isToken(expr)) {
-      return {
-        kind,
-        children: [l_token, expr, r_token],
-      };
-    }
-  }
-
-  private parse_infix(left: Token | Node, token: Token): Token | Node {
-    // aka "led"
-
-    // binops
-    if (
-      token.kind === TokenKind.SYM_PLUS ||
-      token.kind === TokenKind.SYM_DASH ||
-      token.kind === TokenKind.SYM_STAR ||
-      token.kind === TokenKind.SYM_SLASH
-    ) {
-      const right = this.expr(token.precedence);
-      return { kind: token.kind, children: [left, token, right] };
-    }
-
-    // function call
-    if (token.kind === TokenKind.SYM_LPAREN) {
-      let args: Node = { kind: TokenKind.AST_FUNCTION_ARGS, children: [] };
-
-      if (!this.check(TokenKind.SYM_RPAREN)) {
-        let more_arguments = true;
-        // build the argument list here...
-        while (more_arguments) {
-          let arg_expr = this.expr();
-          args.children.push(arg_expr);
-
-          let [matches, token] = this.expect(TokenKind.SYM_COMMA);
-          if (matches) {
-            args.children.push(token);
-          } else {
-            more_arguments = false;
-          }
-        }
-      }
-
-      const [matches, r_token] = this.expect(TokenKind.SYM_RPAREN);
-      console.log(matches);
-      args = this.close_paren_block(
-        args,
-        matches ? args.kind : TokenKind.ERROR,
-        token,
-        r_token
-      );
-      return {
-        kind: TokenKind.AST_FUNCTION_CALL,
-        children: [left, args],
-      };
-    }
-  }
-
-  private expr(precendence: number = 0): Token | Node {
-    const leading_trivia = this.consume_trivia();
-
-    const token = this.advance();
-    let left = this.parse_prefix(token);
-
-    while (
-      this.current_token &&
-      (precendence < this.precedence() || // in an expression
-        this.current_token.kind === TokenKind.SYM_LPAREN) // at a function call?
-    ) {
-      const token = this.advance();
-      left = this.parse_infix(left, token);
-    }
-
-    const trailing_trivia = this.consume_trivia();
-
-    console.log();
-    console.log(leading_trivia);
-    console.log(left);
-    console.log(trailing_trivia);
-    console.log();
-
-    return left;
-  }
-
-  parse(tokens: Token[]) {
-    this.tokens = tokens;
-    this.position = 0;
-    this.current_token = this.tokens[this.position];
-
     return this.expr();
   }
 }
