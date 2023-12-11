@@ -91,8 +91,8 @@ export enum TokenKind {
   SYM_LESS_LESS_EQUAL, // <<=
 
   // Tokens: Template
-  TEMPLATE_LIST_END, // > (disambiguated by template disambiguation)
   TEMPLATE_LIST_START, // < (disambiguated by template disambiguation)
+  TEMPLATE_LIST_END, // > (disambiguated by template disambiguation)
   TEMPLATE_DISAMBIGUATE, // non-textual; tells parser to scan for templates
 
   // Tokens: Identifiers
@@ -101,6 +101,9 @@ export enum TokenKind {
   // AST Tags
   AST_FUNCTION_CALL,
   AST_FUNCTION_ARGS,
+
+  AST_TEMPLATE_IDENTIFIER,
+  AST_TEMPLATE_ARGS,
 
   // Tokens: Errors
   ERROR,

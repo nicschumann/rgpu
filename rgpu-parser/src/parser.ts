@@ -322,6 +322,69 @@ export class RGPUExprParser {
     }
   }
 
+  private parse_call_expression(
+    left: SyntaxNode,
+    token: Token,
+    closing_token_kind: TokenKind,
+    call_kind: TokenKind,
+    arg_list_kind: TokenKind,
+    error_kind: TokenKind
+  ): SyntaxNode {
+    let args: SyntaxNode = {
+      kind: arg_list_kind,
+      children: [],
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
+
+    if (!this.check(closing_token_kind)) {
+      let more_arguments = true;
+      while (more_arguments) {
+        let arg_expr = this.expr();
+        args.children.push(arg_expr);
+
+        // NOTE(Nic): a comma may have trailing trivia...
+        let { matched, node } = this.accept(TokenKind.SYM_COMMA, true);
+        more_arguments = matched;
+
+        if (matched) {
+          args.children.push(node);
+        }
+
+        /**
+         * NOTE(Nic): Are trailing commas okay in function calls? Or only in template lists?
+         * If not allowed in template lists, remove this check.
+         */
+        if (this.check(closing_token_kind)) {
+          more_arguments = false;
+        } else {
+          more_arguments = matched;
+        }
+      }
+    }
+
+    const l_node: SyntaxNode = {
+      kind: token.kind,
+      text: token.text,
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
+    const { matched, node: r_node } = this.accept(closing_token_kind, true);
+    args = this.finish_block(
+      args,
+      matched ? args.kind : TokenKind.ERROR,
+      l_node,
+      r_node
+    );
+
+    return {
+      kind: call_kind,
+      children: [left, args],
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
+  }
+
   private parse_infix(left: SyntaxNode, token: Token): SyntaxNode {
     // Handle Infix Arithmetic Expressions
     if (binary_op_types.has(token.kind)) {
@@ -345,59 +408,26 @@ export class RGPUExprParser {
 
     // Handle Multi-argument Function Calls
     if (token.kind === TokenKind.SYM_LPAREN) {
-      let args: SyntaxNode = {
-        kind: TokenKind.AST_FUNCTION_ARGS,
-        children: [],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
-
-      if (!this.check(TokenKind.SYM_RPAREN)) {
-        let more_arguments = true;
-        while (more_arguments) {
-          let arg_expr = this.expr();
-          args.children.push(arg_expr);
-
-          // NOTE(Nic): a comma may have trailing trivia...
-          let { matched, node } = this.accept(TokenKind.SYM_COMMA, true);
-          more_arguments = matched;
-
-          if (matched) {
-            args.children.push(node);
-          }
-
-          /**
-           * NOTE(Nic): Are trailing commas okay in function calls? Or only in template lists?
-           * If not allowed in template lists, remove this check.
-           */
-          if (this.check(TokenKind.SYM_RPAREN)) {
-            more_arguments = false;
-          } else {
-            more_arguments = matched;
-          }
-        }
-      }
-
-      const l_node: SyntaxNode = {
-        kind: token.kind,
-        text: token.text,
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
-      const { matched, node: r_node } = this.accept(TokenKind.SYM_RPAREN, true);
-      args = this.finish_block(
-        args,
-        matched ? args.kind : TokenKind.ERROR,
-        l_node,
-        r_node
+      return this.parse_call_expression(
+        left,
+        token,
+        TokenKind.SYM_RPAREN,
+        TokenKind.AST_FUNCTION_CALL,
+        TokenKind.AST_FUNCTION_ARGS,
+        TokenKind.ERROR
       );
+    }
 
-      return {
-        kind: TokenKind.AST_FUNCTION_CALL,
-        children: [left, args],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+    // Handle Multi-argument Template List
+    if (token.kind === TokenKind.TEMPLATE_LIST_START) {
+      return this.parse_call_expression(
+        left,
+        token,
+        TokenKind.TEMPLATE_LIST_END,
+        TokenKind.AST_TEMPLATE_IDENTIFIER,
+        TokenKind.AST_TEMPLATE_ARGS,
+        TokenKind.ERROR
+      );
     }
   }
 
@@ -418,8 +448,7 @@ export class RGPUExprParser {
         // the next token is a bracket, indicating an array index
         this.next_token().kind === TokenKind.SYM_LBRACKET ||
         // this current token is an identifier, and the next token starts a template list
-        (this.current_token().kind === TokenKind.IDENTIFIER &&
-          this.next_token().kind === TokenKind.TEMPLATE_LIST_START))
+        this.next_token().kind === TokenKind.TEMPLATE_LIST_START)
     ) {
       let { current, trivia: trailing_trivia } = this.advance();
       left.trailing_trivia.push(...trailing_trivia);

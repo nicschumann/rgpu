@@ -95,6 +95,31 @@ describe("RGPU Expression Parser", () => {
       const cst = parser.parse(tokens);
       const serialized = serialize_nodes(cst);
 
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
+
+      expect(serialized).to.deep.equal(testcase);
+    });
+  });
+
+  it("should parse templated identifiers", () => {
+    const lexer = new RPGUTokenizer();
+    const parser = new RGPUExprParser();
+    const testcases = [
+      "vec2  <u32>",
+      "a<f32, T>(1.0, a<vec2<T>>)",
+      "a<T> * 3.0",
+      "identifier<0.32, >",
+    ];
+
+    testcases.forEach((testcase) => {
+      const tokens = lexer.tokenize_source(testcase);
+
+      // if you need to debug token stream...
+      // console.log(tokens);
+
+      const cst = parser.parse(tokens);
+      const serialized = serialize_nodes(cst);
+
       console.log(JSON.stringify(simplify_cst(cst), null, 4));
 
       expect(serialized).to.deep.equal(testcase);
