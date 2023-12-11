@@ -12,11 +12,15 @@ describe("RGPU Expression Parser", () => {
     const testcases = [
       " a + b     /** this is a big comment test */  / c  // and another comment",
       " a * b / c",
+      " (a + b) * c  // this is a line comment \n",
     ];
 
     testcases.forEach((testcase) => {
       const tokens = lexer.tokenize_source(testcase);
-      console.log(tokens);
+
+      // if you need to debug
+      // console.log(tokens);
+
       const cst = parser.parse(tokens);
       const serialized = serialize_nodes(cst);
 

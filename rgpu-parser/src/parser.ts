@@ -9,6 +9,22 @@ type SyntaxNode = {
   trailing_trivia: Token[];
 };
 
+type AdvanceData = {
+  current: Token;
+  trivia: Token[];
+  next: Token;
+};
+
+type TriviaData = {
+  trivia: Token[];
+  new_index: number;
+};
+
+type ExpectData = {
+  matched: boolean;
+  token: Token;
+};
+
 export function serialize_nodes(syntax: SyntaxNode): string {
   const pre = syntax.leading_trivia.map((v) => v.text).join("");
   const post = syntax.trailing_trivia.map((v) => v.text).join("");
@@ -37,21 +53,24 @@ export class RGPUExprParser2 {
 
   // walks forward from an index, and returns a new index pointing to a non-trivial token
   // or -1 if we reached the end of the stream
-  private skip_trivia(from: number, consuming: boolean): [number, Token[]] {
+  private skip_trivia(from: number, consuming: boolean): TriviaData {
     const trivia: Token[] = [];
-    let index = from;
+    let new_index = from;
     while (
-      index < this.tokens.length &&
-      this.trivia_types.has(this.tokens[index].kind)
+      new_index < this.tokens.length &&
+      this.trivia_types.has(this.tokens[new_index].kind)
     ) {
-      if (consuming && !this.tokens[index].seen) {
-        trivia.push(this.tokens[index]);
-        this.tokens[index].seen = true;
+      if (consuming && !this.tokens[new_index].seen) {
+        trivia.push(this.tokens[new_index]);
+        this.tokens[new_index].seen = true;
       }
-      index += 1;
+      new_index += 1;
     }
 
-    return [index, trivia];
+    return {
+      trivia,
+      new_index,
+    };
   }
 
   private reset(tokens: Token[]) {
@@ -60,47 +79,151 @@ export class RGPUExprParser2 {
     this.next_position = 0;
   }
 
-  private current(): Token | null {
+  private current_token(): Token | null {
     return this.tokens[this.current_position] || null;
   }
 
-  private next(): Token | null {
+  private next_token(): Token | null {
     return this.tokens[this.next_position] || null;
   }
 
-  private precedence(): number {
-    if (!this.next()) return 0;
-
-    return this.next().precedence;
+  private check(kind: TokenKind): boolean {
+    const next = this.next_token();
+    return next && next.kind === kind;
   }
 
-  private advance(): [Token, Token[], Token] {
+  private precedence(): number {
+    if (!this.next_token()) return 0;
+
+    return this.next_token().precedence;
+  }
+
+  private accept(kind: TokenKind): ExpectData {
+    if (this.check(kind)) {
+      // We should be good to ignore trivia in this section. it should always be empty,
+      // since we should have consumed it in the previous `expr` call.
+      let { current, trivia } = this.advance();
+      if (trivia.length !== 0) {
+        // leave this in as an assertion.
+        throw new Error(
+          `some trivia was not consumed before the .accept call: ${trivia}`
+        );
+      }
+      return { matched: true, token: current };
+    } else {
+      return {
+        matched: false,
+        token: { kind: TokenKind.ERROR, text: "", precedence: 0 },
+      };
+    }
+  }
+
+  private advance(): AdvanceData {
     // updates current and next one step.
     // pushes the trivia between current and next onto the stack.
-    const [current_index, trivia] = this.skip_trivia(
+    const { new_index: current_index, trivia } = this.skip_trivia(
       this.current_position + 1,
       true
     );
-    const [next_index, _] = this.skip_trivia(current_index + 1, false);
+    const { new_index: next_index } = this.skip_trivia(
+      current_index + 1,
+      false
+    );
 
     this.current_position = current_index;
     this.next_position = next_index;
 
-    return [
-      this.tokens[current_index] || null,
+    return {
+      current: this.tokens[current_index] || null,
+      next: this.tokens[next_index] || null,
       trivia,
-      this.tokens[next_index] || null,
-    ];
+    };
+  }
+
+  private finish_block(
+    expr: SyntaxNode,
+    kind: TokenKind,
+    l_token: Token,
+    r_token: Token
+  ): SyntaxNode {
+    if (typeof expr.children !== "undefined") {
+      // node
+      expr.kind = kind;
+      expr.children.unshift({
+        kind: l_token.kind,
+        text: l_token.text,
+        leading_trivia: [],
+        trailing_trivia: [],
+      });
+      expr.children.push({
+        kind: r_token.kind,
+        text: r_token.text,
+        leading_trivia: [],
+        trailing_trivia: [],
+      });
+
+      return expr;
+    } else {
+      // token
+      return {
+        kind,
+        children: [
+          {
+            kind: l_token.kind,
+            text: l_token.text,
+            leading_trivia: [],
+            trailing_trivia: [],
+          },
+          expr,
+          {
+            kind: r_token.kind,
+            text: r_token.text,
+            leading_trivia: [],
+            trailing_trivia: [],
+          },
+        ],
+        leading_trivia: [],
+        trailing_trivia: [],
+      };
+    }
   }
 
   private parse_prefix(token: Token): SyntaxNode {
-    // id
+    // IDENTIFIER
     if (token.kind === TokenKind.IDENTIFIER) {
       return {
         kind: TokenKind.IDENTIFIER,
         text: token.text,
         leading_trivia: [],
         trailing_trivia: [],
+      };
+    }
+
+    // PARENS in Arithmetic Expressions
+    if (token.kind === TokenKind.SYM_LPAREN) {
+      const expr = this.expr();
+      const { matched, token: r_token } = this.accept(TokenKind.SYM_RPAREN);
+      const kind = matched ? expr.kind : TokenKind.ERROR;
+      // handles the case where the paren is unmatched...
+      return this.finish_block(expr, kind, token, r_token);
+    }
+  }
+
+  private close_paren_block(
+    expr: Token | Node,
+    kind: TokenKind,
+    l_token: Token,
+    r_token: Token
+  ): Node {
+    if (isNode(expr)) {
+      expr.kind = kind;
+      expr.children.unshift(l_token);
+      expr.children.push(r_token);
+      return expr;
+    } else if (isToken(expr)) {
+      return {
+        kind,
+        children: [l_token, expr, r_token],
       };
     }
   }
@@ -132,14 +255,14 @@ export class RGPUExprParser2 {
   }
 
   private expr(precedence: number = 0) {
-    let [current, leading_trivia, _] = this.advance();
+    let { current, trivia: leading_trivia } = this.advance();
     let left = this.parse_prefix(current);
 
     // attach to the innermost node:
     left.leading_trivia.push(...leading_trivia);
 
-    while (this.current() && precedence < this.precedence()) {
-      let [current, trailing_trivia, _] = this.advance();
+    while (this.current_token() && precedence < this.precedence()) {
+      let { current, trivia: trailing_trivia } = this.advance();
       left.trailing_trivia.push(...trailing_trivia);
       left = this.parse_infix(left, current);
     }
@@ -148,7 +271,7 @@ export class RGPUExprParser2 {
     // left.leading_trivia.push(...leading_trivia);
 
     // TODO(Nic): need to get any trailing trivia on the expr here...
-    const [i, trailing_trivia] = this.skip_trivia(
+    const { trivia: trailing_trivia } = this.skip_trivia(
       this.current_position + 1,
       true
     );
