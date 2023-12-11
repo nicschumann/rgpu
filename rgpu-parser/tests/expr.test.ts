@@ -1,19 +1,28 @@
 import { expect } from "chai";
-import { RGPUExprParser, RPGUTokenizer } from "../src";
+import { RPGUTokenizer } from "../src/tokenizer";
+import {
+  RGPUExprParser2 as RGPUExprParser,
+  serialize_nodes,
+} from "../src/parser";
 
 describe("RGPU Expression Parser", () => {
   it("should parse identifiers", () => {
     const lexer = new RPGUTokenizer();
     const parser = new RGPUExprParser();
-    const testcases = ["a(b,(c+d)", "a+b+c"];
+    const testcases = [
+      " a + b     /** this is a big comment test */  / c  // and another comment",
+      " a * b / c",
+    ];
 
     testcases.forEach((testcase) => {
       const tokens = lexer.tokenize_source(testcase);
+      console.log(tokens);
       const cst = parser.parse(tokens);
+      const serialized = serialize_nodes(cst);
 
       console.log(JSON.stringify(cst, null, 4));
 
-      expect(cst).to.deep.equal([]);
+      expect(serialized).to.deep.equal(testcase);
     });
   });
 });
