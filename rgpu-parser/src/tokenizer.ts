@@ -54,7 +54,6 @@ export class RPGUTokenizer {
           const token = {
             kind,
             text: match[0],
-            precedence: def.right_precedence || 0,
           };
 
           return token;
@@ -128,7 +127,6 @@ export class RPGUTokenizer {
           this.consume_token({
             kind: TokenKind.SYM_GREATER,
             text: ">",
-            precedence: 0,
           });
         } else {
           this.consume_token(token);

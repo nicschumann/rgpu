@@ -106,11 +106,36 @@ export enum TokenKind {
   ERROR,
 }
 
+export type UnaryOperatorTokenKind =
+  | TokenKind.SYM_DASH // 10
+  | TokenKind.SYM_BANG // 10
+  | TokenKind.SYM_TILDE // 10
+  | TokenKind.SYM_STAR // 10
+  | TokenKind.SYM_AMP; // 10
+
+export type BinaryOperatorTokenKind =
+  | TokenKind.SYM_STAR // 9
+  | TokenKind.SYM_SLASH // 9
+  | TokenKind.SYM_PERCENT // 9
+  | TokenKind.SYM_PLUS // 8
+  | TokenKind.SYM_DASH // 8
+  | TokenKind.SYM_LESS_LESS // 7
+  | TokenKind.SYM_GREATER_GREATER // 7
+  | TokenKind.SYM_LESS // 6
+  | TokenKind.SYM_GREATER // 6
+  | TokenKind.SYM_LESS_EQUAL // 6
+  | TokenKind.SYM_GREATER_EQUAL // 6
+  | TokenKind.SYM_EQUAL_EQUAL // 6
+  | TokenKind.SYM_BANG_EQUAL // 6
+  | TokenKind.SYM_AMP // 5
+  | TokenKind.SYM_CARAT // 4
+  | TokenKind.SYM_BAR // 3
+  | TokenKind.SYM_AMP_AMP // 2
+  | TokenKind.SYM_BAR_BAR; // 1
+
 export type TokenData = {
   type: TokenKind;
   re: string;
-  left_precedence?: number;
-  right_precedence?: number;
 };
 
 export const tokenDefinitions: TokenData[] = [
@@ -391,8 +416,6 @@ export const tokenDefinitions: TokenData[] = [
   {
     type: TokenKind.SYM_AMP,
     re: "&",
-    left_precedence: 3,
-    right_precedence: 3,
   },
   {
     type: TokenKind.SYM_AT,
@@ -401,14 +424,10 @@ export const tokenDefinitions: TokenData[] = [
   {
     type: TokenKind.SYM_SLASH,
     re: "\\/",
-    left_precedence: 2,
-    right_precedence: 2,
   },
   {
     type: TokenKind.SYM_BANG,
     re: "!",
-    left_precedence: 3,
-    right_precedence: 3,
   },
   {
     type: TokenKind.SYM_LPAREN,
@@ -465,8 +484,6 @@ export const tokenDefinitions: TokenData[] = [
   {
     type: TokenKind.SYM_DASH,
     re: "-",
-    left_precedence: 1,
-    right_precedence: 1,
   },
   {
     type: TokenKind.SYM_DOT,
@@ -475,8 +492,6 @@ export const tokenDefinitions: TokenData[] = [
   {
     type: TokenKind.SYM_PLUS,
     re: "\\+",
-    left_precedence: 1,
-    right_precedence: 1,
   },
   {
     type: TokenKind.SYM_BAR,
@@ -489,14 +504,10 @@ export const tokenDefinitions: TokenData[] = [
   {
     type: TokenKind.SYM_STAR,
     re: "\\*",
-    left_precedence: 2,
-    right_precedence: 2,
   },
   {
     type: TokenKind.SYM_TILDE,
     re: "~",
-    left_precedence: 3,
-    right_precedence: 3,
   },
   {
     type: TokenKind.SYM_UNDERSCORE,

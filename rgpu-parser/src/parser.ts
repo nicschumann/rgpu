@@ -1,5 +1,9 @@
-import { TokenKind } from "./tokens";
-import { Node, Token, isNode, isToken } from "./types";
+import {
+  TokenKind,
+  UnaryOperatorTokenKind,
+  BinaryOperatorTokenKind,
+} from "./tokens";
+import { Token } from "./types";
 
 type SyntaxNode = {
   kind: TokenKind;
@@ -62,35 +66,86 @@ export function simplify_cst(syntax: SyntaxNode): SimplifiedSyntaxNode {
   }
 }
 
+const unary_operator_precedence: { [key in UnaryOperatorTokenKind]: number } = {
+  [TokenKind.SYM_DASH]: 10,
+  [TokenKind.SYM_BANG]: 10,
+  [TokenKind.SYM_TILDE]: 10,
+  [TokenKind.SYM_STAR]: 10,
+  [TokenKind.SYM_AMP]: 10,
+};
+
+const binary_operator_precedence: { [key in BinaryOperatorTokenKind]: number } =
+  {
+    [TokenKind.SYM_STAR]: 9,
+    [TokenKind.SYM_SLASH]: 9,
+    [TokenKind.SYM_PERCENT]: 9,
+    [TokenKind.SYM_DASH]: 8,
+    [TokenKind.SYM_PLUS]: 8,
+    [TokenKind.SYM_LESS_LESS]: 7,
+    [TokenKind.SYM_GREATER_GREATER]: 7,
+    [TokenKind.SYM_LESS]: 6,
+    [TokenKind.SYM_GREATER]: 6,
+    [TokenKind.SYM_LESS_EQUAL]: 6,
+    [TokenKind.SYM_GREATER_EQUAL]: 6,
+    [TokenKind.SYM_EQUAL_EQUAL]: 6,
+    [TokenKind.SYM_BANG_EQUAL]: 6,
+    [TokenKind.SYM_AMP]: 5,
+    [TokenKind.SYM_CARAT]: 4,
+    [TokenKind.SYM_BAR]: 3,
+    [TokenKind.SYM_AMP_AMP]: 2,
+    [TokenKind.SYM_BAR_BAR]: 1,
+  };
+
+// trivia to skip or collect
+const trivia_types: Set<TokenKind> = new Set([
+  TokenKind.BLANKSPACE,
+  TokenKind.BLOCK_COMMENT,
+  TokenKind.LINEBREAK,
+  TokenKind.LINE_COMMENT,
+]);
+
+const literal_types: Set<TokenKind> = new Set([
+  TokenKind.BOOL_LITERAL,
+  TokenKind.DEC_INT_LITERAL,
+  TokenKind.HEX_INT_LITERAL,
+  TokenKind.DEC_FLOAT_LITERAL,
+  TokenKind.HEX_FLOAT_LITERAL,
+]);
+
+const unary_op_types: Set<TokenKind> = new Set([
+  TokenKind.SYM_DASH,
+  TokenKind.SYM_BANG,
+  TokenKind.SYM_TILDE,
+  TokenKind.SYM_STAR,
+  TokenKind.SYM_AMP,
+]);
+
+const binary_op_types: Set<TokenKind> = new Set([
+  TokenKind.SYM_STAR,
+  TokenKind.SYM_SLASH,
+  TokenKind.SYM_PERCENT,
+  TokenKind.SYM_DASH,
+  TokenKind.SYM_PLUS,
+  TokenKind.SYM_LESS_LESS,
+  TokenKind.SYM_GREATER_GREATER,
+  TokenKind.SYM_LESS,
+  TokenKind.SYM_GREATER,
+  TokenKind.SYM_LESS_EQUAL,
+  TokenKind.SYM_GREATER_EQUAL,
+  TokenKind.SYM_EQUAL_EQUAL,
+  TokenKind.SYM_BANG_EQUAL,
+  TokenKind.SYM_AMP,
+  TokenKind.SYM_CARAT,
+  TokenKind.SYM_BAR,
+  TokenKind.SYM_AMP_AMP,
+  TokenKind.SYM_BAR_BAR,
+]);
+
 export class RGPUExprParser {
   // token stream from lexer
   private tokens: Token[] = [];
   private current_position: number = -1; // always points to non-trivial token
   private next_position: number = 0;
-
-  // trivia to skip or collect
-  private trivia_types: Set<TokenKind> = new Set([
-    TokenKind.BLANKSPACE,
-    TokenKind.BLOCK_COMMENT,
-    TokenKind.LINEBREAK,
-    TokenKind.LINE_COMMENT,
-  ]);
-
-  private literal_types: Set<TokenKind> = new Set([
-    TokenKind.BOOL_LITERAL,
-    TokenKind.DEC_INT_LITERAL,
-    TokenKind.HEX_INT_LITERAL,
-    TokenKind.DEC_FLOAT_LITERAL,
-    TokenKind.HEX_FLOAT_LITERAL,
-  ]);
-
-  private unary_op_types: Set<TokenKind> = new Set([
-    TokenKind.SYM_DASH,
-    TokenKind.SYM_BANG,
-    TokenKind.SYM_TILDE,
-    TokenKind.SYM_STAR,
-    TokenKind.SYM_AMP,
-  ]);
 
   // walks forward from an index, and returns a new index pointing to a non-trivial token
   // or -1 if we reached the end of the stream
@@ -99,7 +154,7 @@ export class RGPUExprParser {
     let new_index = from;
     while (
       new_index < this.tokens.length &&
-      this.trivia_types.has(this.tokens[new_index].kind)
+      trivia_types.has(this.tokens[new_index].kind)
     ) {
       if (consuming && !this.tokens[new_index].seen) {
         trivia.push(this.tokens[new_index]);
@@ -134,9 +189,9 @@ export class RGPUExprParser {
   }
 
   private precedence(): number {
-    if (!this.next_token()) return 0;
-
-    return this.next_token().precedence;
+    const next = this.next_token();
+    if (!next || !binary_op_types.has(next.kind)) return 0;
+    return binary_operator_precedence[next.kind];
   }
 
   private accept(kind: TokenKind, allows_trivia: boolean = false): AcceptData {
@@ -144,6 +199,7 @@ export class RGPUExprParser {
       // We should be good to ignore trivia in this section. it should always be empty,
       // since we should have consumed it in the previous `expr` call.
       let { current, trivia } = this.advance();
+
       if (!allows_trivia && trivia.length > 0) {
         // leave this in as an assertion.
         throw new Error(
@@ -221,10 +277,7 @@ export class RGPUExprParser {
 
   private parse_prefix(token: Token): SyntaxNode {
     // IDENTIFIERs && Literal Types
-    if (
-      token.kind === TokenKind.IDENTIFIER ||
-      this.literal_types.has(token.kind)
-    ) {
+    if (token.kind === TokenKind.IDENTIFIER || literal_types.has(token.kind)) {
       return {
         kind: token.kind,
         text: token.text,
@@ -233,14 +286,14 @@ export class RGPUExprParser {
       };
     }
 
-    if (this.unary_op_types.has(token.kind)) {
+    if (unary_op_types.has(token.kind)) {
       const operator: SyntaxNode = {
         kind: token.kind,
         text: token.text,
         leading_trivia: [],
         trailing_trivia: [],
       };
-      const expr = this.expr(token.precedence + 1);
+      const expr = this.expr(unary_operator_precedence[token.kind]);
       return {
         kind: token.kind,
         children: [operator, expr],
@@ -271,13 +324,8 @@ export class RGPUExprParser {
 
   private parse_infix(left: SyntaxNode, token: Token): SyntaxNode {
     // Handle Infix Arithmetic Expressions
-    if (
-      token.kind === TokenKind.SYM_PLUS ||
-      token.kind === TokenKind.SYM_DASH ||
-      token.kind === TokenKind.SYM_STAR ||
-      token.kind === TokenKind.SYM_SLASH
-    ) {
-      const right = this.expr(token.precedence);
+    if (binary_op_types.has(token.kind)) {
+      const right = this.expr(binary_operator_precedence[token.kind]);
       return {
         kind: token.kind,
         children: [

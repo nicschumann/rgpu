@@ -5,7 +5,6 @@ export enum SyntaxKind {}
 export type Token = {
   kind: TokenKind;
   text: string;
-  precedence: number;
   seen?: boolean;
 };
 

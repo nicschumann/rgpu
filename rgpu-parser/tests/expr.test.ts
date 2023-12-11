@@ -6,7 +6,7 @@ describe("RGPU Expression Parser", () => {
   it("should parse unary operators", () => {
     const lexer = new RPGUTokenizer();
     const parser = new RGPUExprParser();
-    const testcases = ["-a", "&a * (-a + *b*b)", "~b + c", "!!no_op"];
+    const testcases = ["-a", "&a * (-a + *b*b)", "~b + c", "!  !  no_op"];
 
     testcases.forEach((testcase) => {
       const tokens = lexer.tokenize_source(testcase);
@@ -17,7 +17,7 @@ describe("RGPU Expression Parser", () => {
       const cst = parser.parse(tokens);
       const serialized = serialize_nodes(cst);
 
-      console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
 
       expect(serialized).to.deep.equal(testcase);
     });
@@ -69,6 +69,33 @@ describe("RGPU Expression Parser", () => {
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
+
+      expect(serialized).to.deep.equal(testcase);
+    });
+  });
+
+  it("should parse logical expressions", () => {
+    const lexer = new RPGUTokenizer();
+    const parser = new RGPUExprParser();
+    const testcases = [
+      "a & b | b & c | a",
+      "a <= b || a > c && true",
+      "a || b && c",
+      "a && b || c",
+      "a && (b || c)",
+      "a << b | c >> d",
+    ];
+
+    testcases.forEach((testcase) => {
+      const tokens = lexer.tokenize_source(testcase);
+
+      // if you need to debug token stream...
+      // console.log(tokens);
+
+      const cst = parser.parse(tokens);
+      const serialized = serialize_nodes(cst);
+
+      console.log(JSON.stringify(simplify_cst(cst), null, 4));
 
       expect(serialized).to.deep.equal(testcase);
     });
