@@ -391,6 +391,8 @@ export const tokenDefinitions: TokenData[] = [
   {
     type: TokenKind.SYM_AMP,
     re: "&",
+    left_precedence: 3,
+    right_precedence: 3,
   },
   {
     type: TokenKind.SYM_AT,
@@ -405,6 +407,8 @@ export const tokenDefinitions: TokenData[] = [
   {
     type: TokenKind.SYM_BANG,
     re: "!",
+    left_precedence: 3,
+    right_precedence: 3,
   },
   {
     type: TokenKind.SYM_LPAREN,
@@ -491,6 +495,8 @@ export const tokenDefinitions: TokenData[] = [
   {
     type: TokenKind.SYM_TILDE,
     re: "~",
+    left_precedence: 3,
+    right_precedence: 3,
   },
   {
     type: TokenKind.SYM_UNDERSCORE,

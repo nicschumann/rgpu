@@ -84,6 +84,14 @@ export class RGPUExprParser {
     TokenKind.HEX_FLOAT_LITERAL,
   ]);
 
+  private unary_op_types: Set<TokenKind> = new Set([
+    TokenKind.SYM_DASH,
+    TokenKind.SYM_BANG,
+    TokenKind.SYM_TILDE,
+    TokenKind.SYM_STAR,
+    TokenKind.SYM_AMP,
+  ]);
+
   // walks forward from an index, and returns a new index pointing to a non-trivial token
   // or -1 if we reached the end of the stream
   private skip_trivia(from: number, consuming: boolean): TriviaData {
@@ -225,6 +233,22 @@ export class RGPUExprParser {
       };
     }
 
+    if (this.unary_op_types.has(token.kind)) {
+      const operator: SyntaxNode = {
+        kind: token.kind,
+        text: token.text,
+        leading_trivia: [],
+        trailing_trivia: [],
+      };
+      const expr = this.expr(token.precedence + 1);
+      return {
+        kind: token.kind,
+        children: [operator, expr],
+        leading_trivia: [],
+        trailing_trivia: [],
+      };
+    }
+
     // PARENS in Arithmetic Expressions
     if (token.kind === TokenKind.SYM_LPAREN) {
       const l_node: SyntaxNode = {
@@ -337,9 +361,17 @@ export class RGPUExprParser {
     left.leading_trivia.push(...leading_trivia);
 
     while (
+      // current and next tokens exist
       this.next_token() &&
+      // precedence dictates that we're still in the same expression
       (precedence < this.precedence() ||
-        this.next_token().kind === TokenKind.SYM_LPAREN)
+        // the next token is a paren, indicating a function call
+        this.next_token().kind === TokenKind.SYM_LPAREN ||
+        // the next token is a bracket, indicating an array index
+        this.next_token().kind === TokenKind.SYM_LBRACKET ||
+        // this current token is an identifier, and the next token starts a template list
+        (this.current_token().kind === TokenKind.IDENTIFIER &&
+          this.next_token().kind === TokenKind.TEMPLATE_LIST_START))
     ) {
       let { current, trivia: trailing_trivia } = this.advance();
       left.trailing_trivia.push(...trailing_trivia);
