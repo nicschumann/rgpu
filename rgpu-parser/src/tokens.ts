@@ -104,6 +104,9 @@ export enum TokenKind {
   AST_TEMPLATE_IDENTIFIER,
   AST_TEMPLATE_ARGS,
 
+  AST_ARRAY_ACCESS,
+  AST_ARRAY_INDEX,
+
   // Tokens: Errors
   ERR_ERROR,
 }

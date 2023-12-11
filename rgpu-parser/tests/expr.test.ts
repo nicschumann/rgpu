@@ -48,6 +48,31 @@ describe("RGPU Expression Parser", () => {
     });
   });
 
+  it("should parse array accesses", () => {
+    const lexer = new RPGUTokenizer();
+    const parser = new RGPUExprParser();
+    const testcases = [
+      "a[0]",
+      "a[i + 1]",
+      "   x<array, f32>[z + 2]",
+      "(&a + 1)[0]",
+    ];
+
+    testcases.forEach((testcase) => {
+      const tokens = lexer.tokenize_source(testcase);
+
+      // if you need to debug token stream...
+      // console.log(tokens);
+
+      const cst = parser.parse(tokens);
+      const serialized = serialize_nodes(cst);
+
+      console.log(JSON.stringify(simplify_cst(cst), null, 4));
+
+      expect(serialized).to.deep.equal(testcase);
+    });
+  });
+
   it("should parse arithmetic expressions", () => {
     const lexer = new RPGUTokenizer();
     const parser = new RGPUExprParser();
@@ -140,12 +165,12 @@ describe("RGPU Expression Parser", () => {
       const tokens = lexer.tokenize_source(testcase);
 
       // if you need to debug token stream...
-      console.log(tokens);
+      // console.log(tokens);
 
       const cst = parser.parse(tokens);
       const serialized = serialize_nodes(cst);
 
-      console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
 
       expect(serialized).to.deep.equal(testcase);
     });

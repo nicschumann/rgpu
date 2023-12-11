@@ -377,7 +377,7 @@ export class RGPUExprParser {
     const { matched, node: r_node } = this.accept(closing_token_kind, true);
     args = this.finish_block(
       args,
-      matched ? args.kind : TokenKind.ERR_ERROR,
+      matched ? args.kind : error_kind,
       l_node,
       r_node
     );
@@ -391,7 +391,8 @@ export class RGPUExprParser {
   }
 
   private parse_infix(left: SyntaxNode, token: Token): SyntaxNode {
-    // Handle Infix Arithmetic Expressions
+    // Handle Infix Arithmetic Expressions, Logical Expressions, Bitwise expressions
+    // AND member access (as the highest precedence binary operator)
     if (binary_op_types.has(token.kind)) {
       const right = this.expr(binary_operator_precedence[token.kind]);
       return {
@@ -434,13 +435,25 @@ export class RGPUExprParser {
         TokenKind.ERR_ERROR
       );
     }
+
+    // Handle Multi-argument Array Indexing
+    if (token.kind === TokenKind.SYM_LBRACKET) {
+      return this.parse_call_expression(
+        left,
+        token,
+        TokenKind.SYM_RBRACKET,
+        TokenKind.AST_ARRAY_ACCESS,
+        TokenKind.AST_ARRAY_INDEX,
+        TokenKind.ERR_ERROR
+      );
+    }
   }
 
-  private expr(precedence: number = 0) {
+  private expr(precedence: number = 0): SyntaxNode {
     let { current, trivia: leading_trivia } = this.advance();
     let left = this.parse_prefix(current);
 
-    // attach to the innermost node:
+    // attach trivia to the innermost node:
     left.leading_trivia.push(...leading_trivia);
 
     while (
@@ -460,10 +473,6 @@ export class RGPUExprParser {
       left = this.parse_infix(left, current);
     }
 
-    // attach to the outermost node:
-    // left.leading_trivia.push(...leading_trivia);
-
-    // TODO(Nic): need to get any trailing trivia on the expr here...
     const { trivia: trailing_trivia } = this.skip_trivia(
       this.current_position + 1,
       true
@@ -473,7 +482,7 @@ export class RGPUExprParser {
     return left;
   }
 
-  parse(tokens: Token[]) {
+  parse(tokens: Token[]): SyntaxNode {
     this.reset(tokens);
     return this.expr();
   }
