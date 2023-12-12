@@ -38,12 +38,6 @@ export class RGPUParser {
     };
   }
 
-  protected reset(tokens: Token[]) {
-    this.tokens = tokens;
-    this.current_position = -1;
-    this.next_position = 0;
-  }
-
   protected current_token(): Token | null {
     return this.tokens[this.current_position] || null;
   }
@@ -137,5 +131,11 @@ export class RGPUParser {
       index: this.next_position,
       tokens: this.tokens.slice(this.next_position),
     };
+  }
+
+  reset(tokens: Token[]) {
+    this.tokens = tokens;
+    this.current_position = -1;
+    this.next_position = 0;
   }
 }

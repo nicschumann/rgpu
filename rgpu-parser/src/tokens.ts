@@ -108,6 +108,7 @@ export enum TokenKind {
   AST_ARRAY_INDEX,
 
   // AST Tags for Statements
+  AST_COMPOUND_STATEMENT,
   AST_STATEMENT,
   AST_ATTRIBUTE,
 

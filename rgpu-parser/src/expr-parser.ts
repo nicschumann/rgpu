@@ -267,7 +267,7 @@ export class RGPUExprParser extends RGPUParser {
     }
   }
 
-  private expr(precedence: number = 0): SyntaxNode {
+  expr(precedence: number = 0): SyntaxNode {
     let { current, trivia: leading_trivia } = this.advance();
     let left = this.parse_prefix(current);
 

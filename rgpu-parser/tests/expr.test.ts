@@ -13,8 +13,8 @@ describe("RGPU Expression Parser", () => {
 
       // if you need to debug token stream...
       // console.log(tokens);
-
-      const cst = parser.parse(tokens);
+      parser.reset(tokens);
+      const cst = parser.expr();
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
@@ -39,7 +39,8 @@ describe("RGPU Expression Parser", () => {
       // if you need to debug token stream...
       // console.log(tokens);
 
-      const cst = parser.parse(tokens);
+      parser.reset(tokens);
+      const cst = parser.expr();
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
@@ -64,7 +65,8 @@ describe("RGPU Expression Parser", () => {
       // if you need to debug token stream...
       // console.log(tokens);
 
-      const cst = parser.parse(tokens);
+      parser.reset(tokens);
+      const cst = parser.expr();
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
@@ -90,7 +92,8 @@ describe("RGPU Expression Parser", () => {
       // if you need to debug token stream...
       // console.log(tokens);
 
-      const cst = parser.parse(tokens);
+      parser.reset(tokens);
+      const cst = parser.expr();
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
@@ -118,7 +121,8 @@ describe("RGPU Expression Parser", () => {
       // if you need to debug token stream...
       // console.log(tokens);
 
-      const cst = parser.parse(tokens);
+      parser.reset(tokens);
+      const cst = parser.expr();
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
@@ -143,7 +147,8 @@ describe("RGPU Expression Parser", () => {
       // if you need to debug token stream...
       // console.log(tokens);
 
-      const cst = parser.parse(tokens);
+      parser.reset(tokens);
+      const cst = parser.expr();
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
@@ -168,7 +173,8 @@ describe("RGPU Expression Parser", () => {
       // if you need to debug token stream...
       // console.log(tokens);
 
-      const cst = parser.parse(tokens);
+      parser.reset(tokens);
+      const cst = parser.expr();
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
@@ -200,7 +206,8 @@ describe("RGPU Expression Parser", () => {
       // if you need to debug token stream...
       // console.log(tokens);
 
-      const cst = parser.parse(tokens);
+      parser.reset(tokens);
+      const cst = parser.expr();
       const { tokens: remaining_tokens } = parser.remaining();
 
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));

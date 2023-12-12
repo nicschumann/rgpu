@@ -26,7 +26,8 @@ describe("RGPU Statement Parser", () => {
       // if you need to debug token stream...
       // console.log(tokens);
 
-      const cst = parser.parse(tokens);
+      parser.reset(tokens);
+      const cst = parser.compound_stmt();
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
@@ -58,7 +59,49 @@ describe("RGPU Statement Parser", () => {
       // if you need to debug token stream...
       // console.log(tokens);
 
-      const cst = parser.parse(tokens);
+      parser.reset(tokens);
+      const cst = parser.attribute();
+      const serialized = serialize_nodes(cst);
+
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
+
+      expect(serialized).to.deep.equal(testcase);
+    });
+  });
+
+  it("should parse single statements", () => {
+    const lexer = new RPGUTokenizer();
+    const parser = new RGPUStmtParser(new RGPUExprParser());
+    const testcases = ["return a + b;"];
+
+    testcases.forEach((testcase) => {
+      const tokens = lexer.tokenize_source(testcase);
+
+      // if you need to debug token stream...
+      // console.log(tokens);
+      parser.reset(tokens);
+      const cst = parser.single_stmt();
+      const serialized = serialize_nodes(cst);
+
+      console.log(JSON.stringify(simplify_cst(cst), null, 4));
+
+      expect(serialized).to.deep.equal(testcase);
+    });
+  });
+
+  it("should parse compound statements", () => {
+    const lexer = new RPGUTokenizer();
+    const parser = new RGPUStmtParser(new RGPUExprParser());
+    const testcases = ["@const { return a + b; }"];
+
+    testcases.forEach((testcase) => {
+      const tokens = lexer.tokenize_source(testcase);
+
+      // if you need to debug token stream...
+      // console.log(tokens);
+      parser.reset(tokens);
+      const cst = parser.compound_stmt();
+
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
