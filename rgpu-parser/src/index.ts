@@ -1,4 +1,4 @@
-import { RGPUExprParser } from "./parser";
+import { RGPUExprParser } from "./expr-parser";
 import { RPGUTokenizer } from "./tokenizer";
 
 export { RGPUExprParser, RPGUTokenizer };

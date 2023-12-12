@@ -97,7 +97,7 @@ export enum TokenKind {
   // Tokens: Identifiers
   SYM_IDENTIFIER,
 
-  // AST Tags
+  // AST Tags for Expressions
   AST_FUNCTION_CALL,
   AST_FUNCTION_ARGS,
 
@@ -107,7 +107,11 @@ export enum TokenKind {
   AST_ARRAY_ACCESS,
   AST_ARRAY_INDEX,
 
-  // Tokens: Errors
+  // AST Tags for Statements
+  AST_STATEMENT,
+  AST_ATTRIBUTE,
+
+  // Tags for Errors
   ERR_ERROR,
 }
 
