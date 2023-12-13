@@ -118,6 +118,42 @@ export class RGPUStmtParser extends RGPUParser {
     return attr;
   }
 
+  maybe_typed_ident(): SyntaxNode {
+    let { matched, node: decl } = this.accept(TokenKind.SYM_IDENTIFIER, true);
+    if (!matched) {
+      return decl;
+    }
+
+    let { matched: colon_matched, node: colon_node } = this.accept(
+      TokenKind.SYM_COLON,
+      true
+    );
+
+    if (colon_matched) {
+      decl = {
+        kind: TokenKind.AST_TYPED_IDENTIFIER,
+        children: [decl, colon_node],
+        leading_trivia: [],
+        trailing_trivia: [],
+      };
+
+      const template_ident = this.template_ident();
+
+      if (template_ident) {
+        decl.children.push(template_ident);
+      } else {
+        decl.children.push({
+          kind: TokenKind.ERR_ERROR,
+          text: "",
+          leading_trivia: [],
+          trailing_trivia: [],
+        });
+      }
+    }
+
+    return this.absorb_trailing_trivia(decl);
+  }
+
   var_decl(): SyntaxNode {
     let { matched, node } = this.accept(TokenKind.KEYWORD_VAR, true);
 
@@ -133,28 +169,8 @@ export class RGPUStmtParser extends RGPUParser {
     let var_template = this.template();
     if (var_template) decl.children.push(var_template);
 
-    let { node: id_node } = this.accept(TokenKind.SYM_IDENTIFIER, true);
-    decl.children.push(id_node);
-
-    let { matched: colon_matched, node: colon_node } = this.accept(
-      TokenKind.SYM_COLON,
-      true
-    );
-
-    if (colon_matched) {
-      decl.children.push(colon_node);
-      const template_ident = this.template_ident();
-      if (template_ident) {
-        decl.children.push(template_ident);
-      } else {
-        decl.children.push({
-          kind: TokenKind.ERR_ERROR,
-          text: "",
-          leading_trivia: [],
-          trailing_trivia: [],
-        });
-      }
-    }
+    const ident = this.maybe_typed_ident();
+    decl.children.push(ident);
 
     return this.absorb_trailing_trivia(decl);
   }
