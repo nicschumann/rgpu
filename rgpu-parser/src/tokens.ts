@@ -114,6 +114,7 @@ export enum TokenKind {
 
   // Tags for Errors
   ERR_ERROR,
+  ERR_NONE,
 }
 
 export type UnaryOperatorTokenKind =

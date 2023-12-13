@@ -34,10 +34,30 @@ export class RGPUStmtParser extends RGPUParser {
     this.expr_parser = expr_parser;
   }
 
+  private absorb_trailing_trivia(node: SyntaxNode): SyntaxNode {
+    const { trivia: trailing_trivia } = this.skip_trivia(
+      this.current_position + 1,
+      true
+    );
+    node.trailing_trivia.push(...trailing_trivia);
+
+    return node;
+  }
+
   private expr(): SyntaxNode {
     const tokens = this.tokens.slice(this.current_position + 1);
     this.expr_parser.reset(tokens);
     const expr = this.expr_parser.expr();
+    const { tokens: remaining_tokens } = this.expr_parser.remaining();
+    this.reset(remaining_tokens);
+
+    return expr;
+  }
+
+  private template_ident(): SyntaxNode {
+    const tokens = this.tokens.slice(this.current_position + 1);
+    this.expr_parser.reset(tokens);
+    const expr = this.expr_parser.template_ident();
     const { tokens: remaining_tokens } = this.expr_parser.remaining();
     this.reset(remaining_tokens);
 
@@ -82,12 +102,65 @@ export class RGPUStmtParser extends RGPUParser {
     return attr;
   }
 
+  var_decl(): SyntaxNode {
+    let { current, trivia } = this.advance();
+
+    if (
+      current.kind !== TokenKind.KEYWORD_VAR &&
+      current.kind !== TokenKind.KEYWORD_LET &&
+      current.kind !== TokenKind.KEYWORD_CONST
+    )
+      return {
+        kind: TokenKind.ERR_ERROR,
+        text: "",
+        leading_trivia: trivia,
+        trailing_trivia: [],
+      };
+
+    const decl: SyntaxNode = {
+      kind: current.kind,
+      children: [
+        {
+          kind: current.kind,
+          text: current.text,
+          leading_trivia: [],
+          trailing_trivia: [],
+        },
+      ],
+      leading_trivia: trivia,
+      trailing_trivia: [],
+    };
+
+    // NOTE(Nic): need to figure out how to parse these properly...
+    // if (this.check(TokenKind.SYM_TEMPLATE_LIST_START)) {
+    //   const tmpl = this.expr(); // we can use the generic expr parser to extract generic templates.
+    //   decl.children.push(tmpl);
+    // }
+
+    let { node } = this.accept(TokenKind.SYM_IDENTIFIER, true);
+    decl.children.push(node);
+
+    let { matched, node: colon_node } = this.accept(TokenKind.SYM_COLON, true);
+
+    if (matched) {
+      decl.children.push(colon_node);
+      const template_ident = this.template_ident();
+      if (template_ident) {
+        decl.children.push(template_ident);
+      } else {
+        decl.children.push({
+          kind: TokenKind.ERR_ERROR,
+          text: "",
+          leading_trivia: [],
+          trailing_trivia: [],
+        });
+      }
+    }
+
+    return this.absorb_trailing_trivia(decl);
+  }
+
   attribute(): SyntaxNode {
-    /**
-     * TODO(Nic): maybe we should pull identifying the at-sign
-     * into the body of the attribute. if there's no at-sign,
-     * it returns null, and doesn't effect the token stream.
-     */
     let { current: at_sign, trivia: at_trivia } = this.advance();
 
     if (at_sign.kind !== TokenKind.SYM_AT) return null;
@@ -114,18 +187,12 @@ export class RGPUStmtParser extends RGPUParser {
       trailing_trivia: [],
     };
 
-    // Parse the simplest, 0 parameter attribute keywords
     if (
       current.kind === TokenKind.KEYWORD_CONST ||
       (current.kind === TokenKind.SYM_IDENTIFIER &&
         zero_arg_attribute_names.has(current.text))
     ) {
-      const { trivia: trailing_trivia } = this.skip_trivia(
-        this.current_position + 1,
-        true
-      );
-      attr.trailing_trivia.push(...trailing_trivia);
-      return attr;
+      return this.absorb_trailing_trivia(attr);
     }
 
     if (
@@ -133,12 +200,7 @@ export class RGPUStmtParser extends RGPUParser {
       single_arg_attribute_names.has(current.text)
     ) {
       attr = this.attribute_args(attr, 1);
-      const { trivia: trailing_trivia } = this.skip_trivia(
-        this.current_position + 1,
-        true
-      );
-      attr.trailing_trivia.push(...trailing_trivia);
-      return attr;
+      return this.absorb_trailing_trivia(attr);
     }
 
     if (
@@ -147,12 +209,7 @@ export class RGPUStmtParser extends RGPUParser {
         double_arg_attribute_names.has(current.text))
     ) {
       attr = this.attribute_args(attr, 2);
-      const { trivia: trailing_trivia } = this.skip_trivia(
-        this.current_position + 1,
-        true
-      );
-      attr.trailing_trivia.push(...trailing_trivia);
-      return attr;
+      return this.absorb_trailing_trivia(attr);
     }
 
     if (
@@ -160,13 +217,10 @@ export class RGPUStmtParser extends RGPUParser {
       triple_arg_attribute_names.has(current.text)
     ) {
       attr = this.attribute_args(attr, 3);
-      const { trivia: trailing_trivia } = this.skip_trivia(
-        this.current_position + 1,
-        true
-      );
-      attr.trailing_trivia.push(...trailing_trivia);
-      return attr;
+      return this.absorb_trailing_trivia(attr);
     }
+
+    // TODO(Nic): return a trivial error here...
   }
 
   compound_stmt(): SyntaxNode {
@@ -179,9 +233,7 @@ export class RGPUStmtParser extends RGPUParser {
 
     // Handle Maybe Parsing an attribute...
     const attr = this.attribute();
-    if (attr) {
-      compound_stmt.children.push(attr);
-    }
+    if (attr) compound_stmt.children.push(attr);
 
     var { current, trivia } = this.advance();
 
@@ -210,13 +262,7 @@ export class RGPUStmtParser extends RGPUParser {
       // TODO(Nic): record an error, and return...
     }
 
-    const { trivia: trailing_trivia } = this.skip_trivia(
-      this.current_position + 1,
-      true
-    );
-    compound_stmt.trailing_trivia.push(...trailing_trivia);
-
-    return compound_stmt;
+    return this.absorb_trailing_trivia(compound_stmt);
   }
 
   single_stmt(): SyntaxNode {
@@ -244,7 +290,7 @@ export class RGPUStmtParser extends RGPUParser {
       let { node } = this.accept(TokenKind.SYM_SEMICOLON, true);
       stmt.children.push(node);
 
-      return stmt;
+      return this.absorb_trailing_trivia(stmt);
     }
 
     // parse if statement

@@ -83,7 +83,7 @@ describe("RGPU Statement Parser", () => {
       const cst = parser.single_stmt();
       const serialized = serialize_nodes(cst);
 
-      console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
 
       expect(serialized).to.deep.equal(testcase);
     });
@@ -105,6 +105,33 @@ describe("RGPU Statement Parser", () => {
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
+
+      expect(serialized).to.deep.equal(testcase);
+    });
+  });
+
+  it("should parse variable declaration statements", () => {
+    const lexer = new RPGUTokenizer();
+    const parser = new RGPUStmtParser(new RGPUExprParser());
+    const testcases = [
+      // "  var    ident ",
+      // "var x: f32 ",
+      // "var hello: vec2<f32>",
+      "var hello: . ",
+    ];
+
+    testcases.forEach((testcase) => {
+      const tokens = lexer.tokenize_source(testcase);
+
+      // if you need to debug token stream...
+      // console.log(tokens);
+      parser.reset(tokens);
+      const cst = parser.var_decl();
+
+      const serialized = serialize_nodes(cst);
+
+      console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      console.log(parser.remaining());
 
       expect(serialized).to.deep.equal(testcase);
     });

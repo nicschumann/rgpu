@@ -1,6 +1,10 @@
 import { expect } from "chai";
 import { RPGUTokenizer, serialize_tokens } from "../src/tokenizer";
-import { RGPUExprParser, serialize_nodes } from "../src/expr-parser";
+import {
+  RGPUExprParser,
+  serialize_nodes,
+  simplify_cst,
+} from "../src/expr-parser";
 
 describe("RGPU Expression Parser", () => {
   it("should parse unary operators", () => {
@@ -194,9 +198,9 @@ describe("RGPU Expression Parser", () => {
         remaining: ";",
       },
       {
-        input: "a * b b;",
+        input: "a * b b; // test",
         parse: "a * b ",
-        remaining: "b;",
+        remaining: "b; // test",
       },
     ];
 
@@ -211,7 +215,7 @@ describe("RGPU Expression Parser", () => {
       const { tokens: remaining_tokens } = parser.remaining();
 
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
-      // console.log(JSON.stringify(cst, null, 4));
+      // console.log(remaining_tokens);
 
       expect(serialize_nodes(cst)).to.deep.equal(parse);
       expect(serialize_tokens(remaining_tokens)).to.deep.equal(remaining);

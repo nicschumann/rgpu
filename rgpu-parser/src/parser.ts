@@ -22,6 +22,7 @@ export class RGPUParser {
     const trivia: Token[] = [];
     let new_index = from;
     while (
+      new_index > -1 &&
       new_index < this.tokens.length &&
       trivia_types.has(this.tokens[new_index].kind)
     ) {
@@ -57,8 +58,6 @@ export class RGPUParser {
     error_kind: TokenKind = TokenKind.ERR_ERROR
   ): AcceptData {
     if (this.check(kind)) {
-      // We should be good to ignore trivia in this section. it should always be empty,
-      // since we should have consumed it in the previous `expr` call.
       let { current, trivia } = this.advance();
 
       if (!allows_trivia && trivia.length > 0) {
@@ -127,15 +126,33 @@ export class RGPUParser {
   }
 
   remaining(): RemainingData {
-    return {
-      index: this.next_position,
-      tokens: this.tokens.slice(this.next_position),
-    };
+    const candidates = this.tokens.slice(this.current_position + 1);
+    const remaining = { index: this.current_position + 1, tokens: [] };
+    let idx = 0;
+
+    while (idx < candidates.length && candidates[idx].seen) idx += 1;
+
+    remaining.index += idx;
+    remaining.tokens = candidates.slice(idx);
+
+    return remaining;
   }
 
   reset(tokens: Token[]) {
     this.tokens = tokens;
     this.current_position = -1;
     this.next_position = 0;
+
+    /**
+     * NOTE(Nic): this is required so that we maintain the
+     * invariant that the indices in current_position and next_position
+     * always point at nontrivial tokens.
+     */
+    while (
+      this.next_position < this.tokens.length &&
+      trivia_types.has(this.tokens[this.next_position].kind)
+    ) {
+      this.next_position += 1;
+    }
   }
 }

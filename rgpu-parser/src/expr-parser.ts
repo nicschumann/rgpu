@@ -43,6 +43,17 @@ export function simplify_cst(syntax: SyntaxNode): SimplifiedSyntaxNode {
 }
 
 export class RGPUExprParser extends RGPUParser {
+  private absorb_trailing_trivia(node: SyntaxNode): SyntaxNode {
+    const { trivia: final_trivia } = this.skip_trivia(
+      this.current_position + 1,
+      true
+    );
+
+    node.trailing_trivia.push(...final_trivia);
+
+    return node;
+  }
+
   private precedence(): number {
     const next = this.next_token();
     if (!next || !binary_op_types.has(next.kind)) return 0;
@@ -137,6 +148,7 @@ export class RGPUExprParser extends RGPUParser {
     // Unrecognized token in expression
     // we need to put the token back
     this.retreat();
+
     return {
       kind: TokenKind.ERR_ERROR,
       text: "",
@@ -267,6 +279,40 @@ export class RGPUExprParser extends RGPUParser {
     }
   }
 
+  template_ident() {
+    let { matched, node: left } = this.accept(
+      TokenKind.SYM_IDENTIFIER,
+      true,
+      TokenKind.ERR_NONE
+    );
+
+    if (!matched) {
+      return null;
+    }
+
+    if (this.check(TokenKind.SYM_TEMPLATE_LIST_START)) {
+      const { current: template_start_token, trivia: trailing_trivia } =
+        this.advance();
+      left.trailing_trivia.push(...trailing_trivia);
+      left = this.parse_infix(left, template_start_token);
+    }
+
+    return this.absorb_trailing_trivia(left);
+  }
+
+  // template() {
+  //   const { matched, node } = this.accept(
+  //     TokenKind.SYM_TEMPLATE_LIST_START,
+  //     true,
+  //     TokenKind.ERR_NONE
+  //   );
+
+  //   if (!matched) {
+  //     this.retreat()
+  //   }
+
+  // }
+
   expr(precedence: number = 0): SyntaxNode {
     let { current, trivia: leading_trivia } = this.advance();
     let left = this.parse_prefix(current);
@@ -291,13 +337,7 @@ export class RGPUExprParser extends RGPUParser {
       left = this.parse_infix(left, current);
     }
 
-    const { trivia: trailing_trivia } = this.skip_trivia(
-      this.current_position + 1,
-      true
-    );
-    left.trailing_trivia.push(...trailing_trivia);
-
-    return left;
+    return this.absorb_trailing_trivia(left);
   }
 
   parse(tokens: Token[]): SyntaxNode {
