@@ -27,18 +27,28 @@ export function serialize_nodes(syntax: SyntaxNode): string {
 export function simplify_cst(syntax: SyntaxNode): SimplifiedSyntaxNode {
   const pre = syntax.leading_trivia.map((v) => v.text).join("");
   const post = syntax.trailing_trivia.map((v) => v.text).join("");
+  const is_error =
+    syntax.kind === TokenKind.ERR_ERROR || syntax.kind === TokenKind.ERR_NONE;
 
   if (
     typeof syntax.children === "undefined" &&
     typeof syntax.text !== "undefined"
   ) {
-    return { text: `${pre}${syntax.text}${post}` };
+    const node: SimplifiedSyntaxNode = {
+      text: `${pre}${syntax.text}${post}`,
+    };
+    if (is_error) node.error = true;
+
+    return node;
   } else {
-    return {
+    const node: SimplifiedSyntaxNode = {
       pre,
       children: syntax.children.map(simplify_cst),
       post,
     };
+    if (is_error) node.error = true;
+
+    return node;
   }
 }
 

@@ -111,6 +111,21 @@ export class RGPUParser {
     };
   }
 
+  protected advance_until(valid: Set<TokenKind>) {
+    // For Error Recovery in the Token Stream
+    // Advances the stream until the next token is in the valid set.
+
+    const consumed: Token[] = [];
+
+    while (this.next_token() && !valid.has(this.next_token().kind)) {
+      let { trivia, current } = this.advance();
+      consumed.push(...trivia);
+      consumed.push(current);
+    }
+
+    return consumed;
+  }
+
   protected retreat() {
     // updates current and next one step.
     // pushes the trivia between current and next onto the stack.

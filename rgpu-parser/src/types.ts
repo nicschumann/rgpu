@@ -33,12 +33,17 @@ export type SyntaxNode = {
   trailing_trivia: Token[];
 };
 
-export type SimplifiedSyntaxNode = {
-  text?: string;
-  pre?: string;
-  post?: string;
-  children?: SimplifiedSyntaxNode[];
-};
+export type SimplifiedSyntaxNode =
+  | {
+      text?: string;
+      error?: boolean;
+    }
+  | {
+      pre: string;
+      post: string;
+      children: SimplifiedSyntaxNode[];
+      error?: boolean;
+    };
 
 export type AdvanceData = {
   current: Token;

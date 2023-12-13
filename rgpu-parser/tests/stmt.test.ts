@@ -110,14 +110,16 @@ describe("RGPU Statement Parser", () => {
     });
   });
 
-  it("should parse variable declaration statements", () => {
+  it("should parse variable declarations", () => {
     const lexer = new RPGUTokenizer();
     const parser = new RGPUStmtParser(new RGPUExprParser());
     const testcases = [
       "  var<attr>    ident ",
       "var x: f32 ",
       "var hello: vec2<f32>",
-      // "var hello: . ",
+      "var<storage, read> hello: v<i32> = f(x)  ",
+      "const x: i32 = (1 + 2) * 3 ",
+      // "const x: i32 = ;",
     ];
 
     testcases.forEach((testcase) => {
@@ -126,11 +128,42 @@ describe("RGPU Statement Parser", () => {
       // if you need to debug token stream...
       // console.log(tokens);
       parser.reset(tokens);
-      const cst = parser.var_decl();
+      const cst = parser.var_stmt();
 
       const serialized = serialize_nodes(cst);
 
+      // console.log(JSON.stringify(cst, null, 4));
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(parser.remaining());
+
+      expect(serialized).to.deep.equal(testcase);
+    });
+  });
+
+  it("should parse global variable declarations", () => {
+    const lexer = new RPGUTokenizer();
+    const parser = new RGPUStmtParser(new RGPUExprParser());
+    const testcases = [
+      // "@group(0) @binding(1) var<uniform, read> a = 1",
+      "@workgroup_(0,1,2) var<uniform, read> a : array<f32, 2> = a + b",
+      "@work(0,1 @binding(0) var<uniform, read> a : array<f32, 2> = a + b",
+      // "@group(0) @binding(1) var<uniform, read> = ;",
+    ];
+
+    testcases.forEach((testcase) => {
+      const tokens = lexer.tokenize_source(testcase);
+
+      // if you need to debug token stream...
+      // console.log(tokens);
+      parser.reset(tokens);
+      const cst = parser.global_var_decl();
+
+      console.log(cst);
+
+      const serialized = serialize_nodes(cst);
+
+      // console.log(JSON.stringify(cst, null, 4));
+      console.log(JSON.stringify(simplify_cst(cst), null, 4));
       // console.log(parser.remaining());
 
       expect(serialized).to.deep.equal(testcase);

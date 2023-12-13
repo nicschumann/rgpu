@@ -154,7 +154,118 @@ export class RGPUStmtParser extends RGPUParser {
     return this.absorb_trailing_trivia(decl);
   }
 
+  var_stmt(): SyntaxNode {
+    // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-variable_or_value_statement)
+    if (
+      this.check(TokenKind.KEYWORD_CONST) ||
+      this.check(TokenKind.KEYWORD_LET)
+    ) {
+      const { current, trivia } = this.advance();
+      const decl: SyntaxNode = {
+        kind: current.kind,
+        children: [
+          {
+            kind: current.kind,
+            text: current.text,
+            leading_trivia: trivia,
+            trailing_trivia: [],
+          },
+        ],
+        leading_trivia: [],
+        trailing_trivia: [],
+      };
+
+      const ident = this.maybe_typed_ident();
+      if (ident) {
+        decl.children.push(ident);
+      } else {
+        decl.children.push({
+          kind: TokenKind.ERR_ERROR,
+          text: "",
+          leading_trivia: [],
+          trailing_trivia: [],
+        });
+      }
+
+      const { matched, node } = this.accept(TokenKind.SYM_EQUAL, true);
+
+      if (matched) {
+        decl.children.push(node);
+        const expr = this.expr();
+        decl.children.push(expr);
+      }
+
+      return this.absorb_trailing_trivia(decl);
+
+      // we need to parse a const or a let declaration
+    } else {
+      const decl = this.var_decl();
+      if (!decl) return null;
+
+      const { matched, node } = this.accept(TokenKind.SYM_EQUAL, true);
+
+      if (matched) {
+        decl.children.push(node);
+        const expr = this.expr();
+        decl.children.push(expr);
+      }
+
+      return this.absorb_trailing_trivia(decl);
+    }
+  }
+
+  global_var_decl(): SyntaxNode {
+    // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-global_variable_decl)
+    const decl: SyntaxNode = {
+      kind: TokenKind.AST_GLOBAL_VAR_DECLARATION,
+      children: [],
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
+
+    let attribute: SyntaxNode = null;
+    while ((attribute = this.attribute()) !== null) {
+      if (attribute.kind === TokenKind.ERR_ERROR) {
+        const consumed = this.advance_until(
+          new Set([TokenKind.KEYWORD_VAR, TokenKind.SYM_AT])
+        );
+
+        attribute.children.push({
+          kind: TokenKind.ERR_ERROR,
+          text: "",
+          leading_trivia: consumed,
+          trailing_trivia: [],
+        });
+      }
+      // parse 0 or more attributes
+      decl.children.push(attribute);
+    }
+
+    const var_decl = this.var_decl();
+    if (var_decl) {
+      decl.children.push(var_decl);
+    } else {
+      decl.children.push({
+        kind: TokenKind.ERR_ERROR,
+        text: "",
+        leading_trivia: [],
+        trailing_trivia: [],
+      });
+    }
+
+    const { matched, node } = this.accept(TokenKind.SYM_EQUAL, true);
+
+    if (matched) {
+      decl.children.push(node);
+      const expr = this.expr();
+      decl.children.push(expr);
+    }
+
+    return this.absorb_trailing_trivia(decl);
+  }
+
   var_decl(): SyntaxNode {
+    // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-variable_decl)
     let { matched, node } = this.accept(TokenKind.KEYWORD_VAR, true);
 
     if (!matched) return null;
@@ -230,7 +341,11 @@ export class RGPUStmtParser extends RGPUParser {
       return this.absorb_trailing_trivia(attr);
     }
 
-    // TODO(Nic): return a trivial error here...
+    // if we got here, we didn't match a valid attribute term
+    // return an error.
+    attr.kind = TokenKind.ERR_ERROR;
+    attr.children[1].kind = TokenKind.ERR_ERROR;
+    return this.absorb_trailing_trivia(attr);
   }
 
   compound_stmt(): SyntaxNode {

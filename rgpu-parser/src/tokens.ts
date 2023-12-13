@@ -114,6 +114,7 @@ export enum TokenKind {
   AST_ATTRIBUTE,
 
   AST_VAR_DECLARATION,
+  AST_GLOBAL_VAR_DECLARATION,
   AST_TYPED_IDENTIFIER,
 
   // Tags for Errors
