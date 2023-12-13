@@ -124,14 +124,14 @@ describe("RGPU Statement Parser", () => {
       const tokens = lexer.tokenize_source(testcase);
 
       // if you need to debug token stream...
-      console.log(tokens);
+      // console.log(tokens);
       parser.reset(tokens);
       const cst = parser.var_decl();
 
       const serialized = serialize_nodes(cst);
 
-      console.log(JSON.stringify(simplify_cst(cst), null, 4));
-      console.log(parser.remaining());
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(parser.remaining());
 
       expect(serialized).to.deep.equal(testcase);
     });

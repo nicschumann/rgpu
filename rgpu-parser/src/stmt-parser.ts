@@ -44,6 +44,12 @@ export class RGPUStmtParser extends RGPUParser {
     return node;
   }
 
+  /**
+   * NOTE(Nic): definitely refactor these expressions that
+   * prepare the subparser state and then call a specific sub-parse
+   * routine...
+   */
+
   private expr(): SyntaxNode {
     const tokens = this.tokens.slice(this.current_position + 1);
     this.expr_parser.reset(tokens);
@@ -113,44 +119,29 @@ export class RGPUStmtParser extends RGPUParser {
   }
 
   var_decl(): SyntaxNode {
-    let { current, trivia } = this.advance();
+    let { matched, node } = this.accept(TokenKind.KEYWORD_VAR, true);
 
-    if (
-      current.kind !== TokenKind.KEYWORD_VAR &&
-      current.kind !== TokenKind.KEYWORD_LET &&
-      current.kind !== TokenKind.KEYWORD_CONST
-    )
-      return {
-        kind: TokenKind.ERR_ERROR,
-        text: "",
-        leading_trivia: trivia,
-        trailing_trivia: [],
-      };
+    if (!matched) return null;
 
     const decl: SyntaxNode = {
-      kind: current.kind,
-      children: [
-        {
-          kind: current.kind,
-          text: current.text,
-          leading_trivia: [],
-          trailing_trivia: [],
-        },
-      ],
-      leading_trivia: trivia,
+      kind: TokenKind.AST_VAR_DECLARATION,
+      children: [node],
+      leading_trivia: [],
       trailing_trivia: [],
     };
 
-    // NOTE(Nic): need to figure out how to parse these properly...
     let var_template = this.template();
     if (var_template) decl.children.push(var_template);
 
-    let { node } = this.accept(TokenKind.SYM_IDENTIFIER, true);
-    decl.children.push(node);
+    let { node: id_node } = this.accept(TokenKind.SYM_IDENTIFIER, true);
+    decl.children.push(id_node);
 
-    let { matched, node: colon_node } = this.accept(TokenKind.SYM_COLON, true);
+    let { matched: colon_matched, node: colon_node } = this.accept(
+      TokenKind.SYM_COLON,
+      true
+    );
 
-    if (matched) {
+    if (colon_matched) {
       decl.children.push(colon_node);
       const template_ident = this.template_ident();
       if (template_ident) {
@@ -169,21 +160,16 @@ export class RGPUStmtParser extends RGPUParser {
   }
 
   attribute(): SyntaxNode {
-    let { current: at_sign, trivia: at_trivia } = this.advance();
+    let { matched, node: at_node } = this.accept(TokenKind.SYM_AT, true);
 
-    if (at_sign.kind !== TokenKind.SYM_AT) return null;
+    if (!matched) return null;
 
     let { current, trivia } = this.advance();
 
     let attr: SyntaxNode = {
       kind: TokenKind.AST_ATTRIBUTE,
       children: [
-        {
-          kind: at_sign.kind,
-          text: at_sign.text,
-          leading_trivia: [],
-          trailing_trivia: [],
-        },
+        at_node,
         {
           kind: current.kind,
           text: current.text,
@@ -191,7 +177,7 @@ export class RGPUStmtParser extends RGPUParser {
           trailing_trivia: [],
         },
       ],
-      leading_trivia: at_trivia,
+      leading_trivia: [],
       trailing_trivia: [],
     };
 

@@ -113,6 +113,8 @@ export enum TokenKind {
   AST_STATEMENT,
   AST_ATTRIBUTE,
 
+  AST_VAR_DECLARATION,
+
   // Tags for Errors
   ERR_ERROR,
   ERR_NONE,
