@@ -215,50 +215,116 @@ export class RGPUStmtParser extends RGPUParser {
   }
 
   global_var_decl(): SyntaxNode {
-    // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-global_variable_decl)
-    const decl: SyntaxNode = {
+    // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-global_variable_decl)'
+    // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-global_value_decl)
+
+    let decl: SyntaxNode = {
       kind: TokenKind.AST_GLOBAL_VAR_DECLARATION,
       children: [],
       leading_trivia: [],
       trailing_trivia: [],
     };
 
-    let attribute: SyntaxNode = null;
-    while ((attribute = this.attribute()) !== null) {
-      if (attribute.kind === TokenKind.ERR_ERROR) {
-        const consumed = this.advance_until(
-          new Set([TokenKind.KEYWORD_VAR, TokenKind.SYM_AT])
-        );
+    /**
+     * NOTE(Nic): I am diverging from the spec here to make the parsing
+     * a bit more robust. keyword_const does not accept attributes infront
+     * of it, but I will parse them anyway, and then mark those nodes as errors
+     * if they are present.
+     */
 
-        attribute.children.push({
+    // handle global var declaration and override declaration
+    decl = this.attributes(decl, [
+      TokenKind.KEYWORD_VAR,
+      TokenKind.KEYWORD_OVERRIDE,
+      TokenKind.KEYWORD_CONST,
+    ]);
+
+    if (this.check(TokenKind.KEYWORD_VAR)) {
+      const var_decl = this.var_decl();
+      if (var_decl) {
+        decl.children.push(var_decl);
+      } else {
+        decl.children.push({
           kind: TokenKind.ERR_ERROR,
           text: "",
-          leading_trivia: consumed,
+          leading_trivia: [],
           trailing_trivia: [],
         });
       }
-      // parse 0 or more attributes
-      decl.children.push(attribute);
-    }
 
-    const var_decl = this.var_decl();
-    if (var_decl) {
-      decl.children.push(var_decl);
+      const { matched, node } = this.accept(TokenKind.SYM_EQUAL, true);
+
+      if (matched) {
+        decl.children.push(node);
+        const expr = this.expr();
+        decl.children.push(expr);
+      }
+    } else if (this.check(TokenKind.KEYWORD_OVERRIDE)) {
+      const { node } = this.accept(TokenKind.KEYWORD_OVERRIDE, true);
+      decl.children.push(node);
+
+      const ident = this.maybe_typed_ident();
+      if (ident) {
+        decl.children.push(ident);
+      } else {
+        decl.children.push({
+          kind: TokenKind.ERR_ERROR,
+          text: "",
+          leading_trivia: [],
+          trailing_trivia: [],
+        });
+      }
+
+      const { matched, node: equal_node } = this.accept(
+        TokenKind.SYM_EQUAL,
+        true
+      );
+
+      if (matched) {
+        decl.children.push(equal_node);
+        const expr = this.expr();
+        decl.children.push(expr);
+      }
+
+      return this.absorb_trailing_trivia(decl);
+    } else if (this.check(TokenKind.KEYWORD_CONST)) {
+      if (decl.children.length) {
+        // we parsed some attributes, but const should not have attributes.
+        // mark them as errors.
+        decl.children.forEach((child) => (child.kind = TokenKind.ERR_ERROR));
+      }
+
+      const { node } = this.accept(TokenKind.KEYWORD_CONST, true);
+      decl.children.push(node);
+
+      const ident = this.maybe_typed_ident();
+      if (ident) {
+        decl.children.push(ident);
+      } else {
+        decl.children.push({
+          kind: TokenKind.ERR_ERROR,
+          text: "",
+          leading_trivia: [],
+          trailing_trivia: [],
+        });
+      }
+
+      const { matched, node: equal_node } = this.accept(
+        TokenKind.SYM_EQUAL,
+        true
+      );
+      decl.children.push(equal_node);
+
+      const expr = this.expr();
+      decl.children.push(expr);
     } else {
+      // error case...
       decl.children.push({
         kind: TokenKind.ERR_ERROR,
         text: "",
         leading_trivia: [],
         trailing_trivia: [],
       });
-    }
-
-    const { matched, node } = this.accept(TokenKind.SYM_EQUAL, true);
-
-    if (matched) {
-      decl.children.push(node);
-      const expr = this.expr();
-      decl.children.push(expr);
     }
 
     return this.absorb_trailing_trivia(decl);
@@ -346,6 +412,31 @@ export class RGPUStmtParser extends RGPUParser {
     attr.kind = TokenKind.ERR_ERROR;
     attr.children[1].kind = TokenKind.ERR_ERROR;
     return this.absorb_trailing_trivia(attr);
+  }
+
+  private attributes(
+    decl: SyntaxNode,
+    terminals: TokenKind[] = []
+  ): SyntaxNode {
+    let attribute: SyntaxNode = null;
+    const terminal_set = new Set([TokenKind.SYM_AT, ...terminals]);
+
+    while ((attribute = this.attribute()) !== null) {
+      if (attribute.kind === TokenKind.ERR_ERROR) {
+        const consumed = this.advance_until(terminal_set);
+
+        attribute.children.push({
+          kind: TokenKind.ERR_ERROR,
+          text: "",
+          leading_trivia: consumed,
+          trailing_trivia: [],
+        });
+      }
+      // parse 0 or more attributes
+      decl.children.push(attribute);
+    }
+
+    return decl;
   }
 
   compound_stmt(): SyntaxNode {

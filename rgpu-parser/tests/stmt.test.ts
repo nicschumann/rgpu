@@ -140,14 +140,20 @@ describe("RGPU Statement Parser", () => {
     });
   });
 
-  it("should parse global variable declarations", () => {
+  it("should parse global variable and value declarations", () => {
     const lexer = new RPGUTokenizer();
     const parser = new RGPUStmtParser(new RGPUExprParser());
     const testcases = [
-      // "@group(0) @binding(1) var<uniform, read> a = 1",
+      "@group(0) @binding(1) var<uniform, read> a = 1",
       "@workgroup_(0,1,2) var<uniform, read> a : array<f32, 2> = a + b",
       "@work(0,1 @binding(0) var<uniform, read> a : array<f32, 2> = a + b",
-      // "@group(0) @binding(1) var<uniform, read> = ;",
+      "@group(0) @binding(1) var<uniform, read> = ", // error
+      "const a: i32 = f(1)",
+      "override a: vec2<bool>",
+      "@binding(0) override a: vec2<bool>",
+      "@binding(1)override input: vec2<bool> = vec2(true, true)",
+      "const test: i32", // error
+      "@workgroup_size const test: i32", // big error
     ];
 
     testcases.forEach((testcase) => {
@@ -157,8 +163,6 @@ describe("RGPU Statement Parser", () => {
       // console.log(tokens);
       parser.reset(tokens);
       const cst = parser.global_var_decl();
-
-      console.log(cst);
 
       const serialized = serialize_nodes(cst);
 
