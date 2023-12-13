@@ -64,6 +64,16 @@ export class RGPUStmtParser extends RGPUParser {
     return expr;
   }
 
+  private template(): SyntaxNode {
+    const tokens = this.tokens.slice(this.current_position + 1);
+    this.expr_parser.reset(tokens);
+    const expr = this.expr_parser.template();
+    const { tokens: remaining_tokens } = this.expr_parser.remaining();
+    this.reset(remaining_tokens);
+
+    return expr;
+  }
+
   private attribute_args(
     attr: SyntaxNode,
     max_num_params: 1 | 2 | 3
@@ -132,10 +142,8 @@ export class RGPUStmtParser extends RGPUParser {
     };
 
     // NOTE(Nic): need to figure out how to parse these properly...
-    // if (this.check(TokenKind.SYM_TEMPLATE_LIST_START)) {
-    //   const tmpl = this.expr(); // we can use the generic expr parser to extract generic templates.
-    //   decl.children.push(tmpl);
-    // }
+    let var_template = this.template();
+    if (var_template) decl.children.push(var_template);
 
     let { node } = this.accept(TokenKind.SYM_IDENTIFIER, true);
     decl.children.push(node);

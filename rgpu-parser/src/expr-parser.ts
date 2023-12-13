@@ -290,28 +290,35 @@ export class RGPUExprParser extends RGPUParser {
       return null;
     }
 
-    if (this.check(TokenKind.SYM_TEMPLATE_LIST_START)) {
-      const { current: template_start_token, trivia: trailing_trivia } =
-        this.advance();
-      left.trailing_trivia.push(...trailing_trivia);
-      left = this.parse_infix(left, template_start_token);
+    const template = this.template();
+    if (template) {
+      template.children.unshift(left);
+      left = template;
     }
 
     return this.absorb_trailing_trivia(left);
   }
 
-  // template() {
-  //   const { matched, node } = this.accept(
-  //     TokenKind.SYM_TEMPLATE_LIST_START,
-  //     true,
-  //     TokenKind.ERR_NONE
-  //   );
+  template() {
+    if (!this.check(TokenKind.SYM_TEMPLATE_LIST_START)) {
+      return null;
+    }
 
-  //   if (!matched) {
-  //     this.retreat()
-  //   }
+    let left: SyntaxNode = {
+      kind: TokenKind.SYM_DISAMBIGUATE_TEMPLATE,
+      text: "",
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
 
-  // }
+    const { current: template_start_token, trivia: leading_trivia } =
+      this.advance();
+    left = this.parse_infix(left, template_start_token);
+    left.leading_trivia.push(...leading_trivia);
+    left.children.shift(); // get rid of the disambiguate template node?
+
+    return this.absorb_trailing_trivia(left);
+  }
 
   expr(precedence: number = 0): SyntaxNode {
     let { current, trivia: leading_trivia } = this.advance();

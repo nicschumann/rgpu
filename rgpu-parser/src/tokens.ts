@@ -91,6 +91,7 @@ export enum TokenKind {
   SYM_LESS_LESS_EQUAL, // <<=
 
   // Tokens: Template
+  SYM_DISAMBIGUATE_TEMPLATE,
   SYM_TEMPLATE_LIST_START, // < (disambiguated by template disambiguation)
   SYM_TEMPLATE_LIST_END, // > (disambiguated by template disambiguation)
 

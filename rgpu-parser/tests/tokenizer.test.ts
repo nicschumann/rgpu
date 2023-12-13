@@ -74,6 +74,24 @@ describe("RGPU Tokenizer", () => {
     });
   });
 
+  it("should tokenize var attributes", () => {
+    const lexer = new RPGUTokenizer();
+    const testcases = ["var<storage, read>"];
+
+    testcases.forEach((testcase) => {
+      const r = lexer.tokenize_source(testcase).map(normalize);
+      expect(r).to.deep.equal([
+        { kind: TokenKind.KEYWORD_VAR, text: "var" },
+        { kind: TokenKind.SYM_TEMPLATE_LIST_START, text: "<" },
+        { kind: TokenKind.SYM_IDENTIFIER, text: "storage" },
+        { kind: TokenKind.SYM_COMMA, text: "," },
+        { kind: TokenKind.BLANKSPACE, text: " " },
+        { kind: TokenKind.SYM_IDENTIFIER, text: "read" },
+        { kind: TokenKind.SYM_TEMPLATE_LIST_END, text: ">" },
+      ]);
+    });
+  });
+
   it("should tokenize assignment", () => {
     const lexer = new RPGUTokenizer();
     const testcases = ["var a123 = 100;"];

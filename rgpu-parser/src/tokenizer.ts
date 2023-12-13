@@ -81,7 +81,10 @@ export class RPGUTokenizer {
     let depth: number = 0;
 
     while ((token = this.next_token()) !== null) {
-      if (token.kind === TokenKind.SYM_IDENTIFIER) {
+      if (
+        token.kind === TokenKind.SYM_IDENTIFIER ||
+        token.kind === TokenKind.KEYWORD_VAR
+      ) {
         this.consume_token(token);
         // We need to check for template lists:
         // [as here](https://www.w3.org/TR/WGSL/#template-lists-sec)

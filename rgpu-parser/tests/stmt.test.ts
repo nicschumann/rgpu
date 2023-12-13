@@ -114,17 +114,17 @@ describe("RGPU Statement Parser", () => {
     const lexer = new RPGUTokenizer();
     const parser = new RGPUStmtParser(new RGPUExprParser());
     const testcases = [
-      // "  var    ident ",
-      // "var x: f32 ",
-      // "var hello: vec2<f32>",
-      "var hello: . ",
+      "  var<attr>    ident ",
+      "var x: f32 ",
+      "var hello: vec2<f32>",
+      // "var hello: . ",
     ];
 
     testcases.forEach((testcase) => {
       const tokens = lexer.tokenize_source(testcase);
 
       // if you need to debug token stream...
-      // console.log(tokens);
+      console.log(tokens);
       parser.reset(tokens);
       const cst = parser.var_decl();
 
