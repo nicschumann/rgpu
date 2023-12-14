@@ -214,6 +214,68 @@ export class RGPUStmtParser extends RGPUParser {
     }
   }
 
+  struct_decl(): SyntaxNode {
+    // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-struct_decl)
+    const { matched: struct_matched, node: struct_node } = this.accept(
+      TokenKind.KEYWORD_STRUCT,
+      true
+    );
+    if (!struct_matched) return null;
+
+    const decl: SyntaxNode = {
+      kind: TokenKind.AST_STRUCT_DECLRATAION,
+      children: [struct_node],
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
+
+    const { node: ident_node } = this.accept(TokenKind.SYM_IDENTIFIER, true);
+    decl.children.push(ident_node);
+
+    const { matched: lparen_matched, node: lparen_node } = this.accept(
+      TokenKind.SYM_LBRACE,
+      true
+    );
+    decl.children.push(lparen_node);
+
+    if (lparen_matched) {
+      while (
+        this.check(TokenKind.SYM_AT) ||
+        this.check(TokenKind.SYM_IDENTIFIER) ||
+        this.check(TokenKind.SYM_COMMA)
+      ) {
+        // try and parse a member identifier...
+        let struct_member: SyntaxNode = {
+          kind: TokenKind.AST_STRUCT_MEMBER,
+          children: [],
+          leading_trivia: [],
+          trailing_trivia: [],
+        };
+
+        struct_member = this.attributes(struct_member, [
+          TokenKind.SYM_IDENTIFIER,
+        ]);
+
+        const typed_ident = this.maybe_typed_ident();
+        struct_member.children.push(typed_ident);
+        decl.children.push(struct_member);
+
+        const { matched: comma_matched, node: comma_node } = this.accept(
+          TokenKind.SYM_COMMA,
+          true
+        );
+
+        if (!comma_matched && this.check(TokenKind.SYM_RBRACE)) break;
+        decl.children.push(comma_node);
+      }
+    }
+
+    const { node: rparen_node } = this.accept(TokenKind.SYM_RBRACE, true);
+    decl.children.push(rparen_node);
+
+    return this.absorb_trailing_trivia(decl);
+  }
+
   type_alias_decl(): SyntaxNode {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-type_alias_decl)
 

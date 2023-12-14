@@ -196,6 +196,35 @@ describe("RGPU Statement Parser", () => {
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(cst, null, 4));
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(parser.remaining());
+
+      expect(serialized).to.deep.equal(testcase);
+    });
+  });
+
+  it("should parse alias declarations", () => {
+    const lexer = new RPGUTokenizer();
+    const parser = new RGPUStmtParser(new RGPUExprParser());
+    const testcases = [
+      "struct test {}",
+      "struct test {,}", // error case
+      "struct Test { test", // error case...
+      "struct Test { @binding(0) test: vec2<i32> }    ",
+      "struct Test { @binding(0) @group(1) test: vec2<i32>, integer: i32, }    ",
+    ];
+
+    testcases.forEach((testcase) => {
+      const tokens = lexer.tokenize_source(testcase);
+
+      // if you need to debug token stream...
+      console.log(tokens);
+      parser.reset(tokens);
+      const cst = parser.struct_decl();
+
+      const serialized = serialize_nodes(cst);
+
+      // console.log(JSON.stringify(cst, null, 4));
       console.log(JSON.stringify(simplify_cst(cst), null, 4));
       // console.log(parser.remaining());
 
