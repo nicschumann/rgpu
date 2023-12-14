@@ -214,8 +214,31 @@ export class RGPUStmtParser extends RGPUParser {
     }
   }
 
+  const_assert(): SyntaxNode {
+    // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-const_assert_statement)
+
+    const { matched: ca_matched, node: ca_node } = this.accept(
+      TokenKind.KEYWORD_CONST_ASSERT,
+      true
+    );
+    if (!ca_matched) return null;
+
+    const decl: SyntaxNode = {
+      kind: TokenKind.AST_CONST_ASSERT,
+      children: [ca_node],
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
+
+    const expr = this.expr();
+    decl.children.push(expr);
+
+    return this.absorb_trailing_trivia(decl);
+  }
+
   struct_decl(): SyntaxNode {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-struct_decl)
+
     const { matched: struct_matched, node: struct_node } = this.accept(
       TokenKind.KEYWORD_STRUCT,
       true

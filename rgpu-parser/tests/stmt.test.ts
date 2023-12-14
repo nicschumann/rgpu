@@ -212,20 +212,44 @@ describe("RGPU Statement Parser", () => {
       "struct Test { test", // error case...
       "struct Test { @binding(0) test: vec2<i32> }    ",
       "struct Test { @binding(0) @group(1) test: vec2<i32>, integer: i32, }    ",
+      "struct Data { a : i32, b : vec2<f32>, c : array<i32, 10>}",
     ];
 
     testcases.forEach((testcase) => {
       const tokens = lexer.tokenize_source(testcase);
 
       // if you need to debug token stream...
-      console.log(tokens);
+      // console.log(tokens);
       parser.reset(tokens);
       const cst = parser.struct_decl();
 
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(cst, null, 4));
-      console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(parser.remaining());
+
+      expect(serialized).to.deep.equal(testcase);
+    });
+  });
+
+  it("should const assert statements", () => {
+    const lexer = new RPGUTokenizer();
+    const parser = new RGPUStmtParser(new RGPUExprParser());
+    const testcases = ["const_assert a < 23 + b"];
+
+    testcases.forEach((testcase) => {
+      const tokens = lexer.tokenize_source(testcase);
+
+      // if you need to debug token stream...
+      // console.log(tokens);
+      parser.reset(tokens);
+      const cst = parser.const_assert();
+
+      const serialized = serialize_nodes(cst);
+
+      // console.log(JSON.stringify(cst, null, 4));
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
       // console.log(parser.remaining());
 
       expect(serialized).to.deep.equal(testcase);
