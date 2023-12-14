@@ -560,75 +560,110 @@ export class RGPUStmtParser extends RGPUParser {
   }
 
   compound_stmt(): SyntaxNode {
-    const compound_stmt: SyntaxNode = {
+    let compound_stmt: SyntaxNode = {
       kind: TokenKind.AST_COMPOUND_STATEMENT,
       children: [],
       leading_trivia: [],
       trailing_trivia: [],
     };
 
-    // Handle Maybe Parsing an attribute...
-    const attr = this.attribute();
-    if (attr) compound_stmt.children.push(attr);
+    // Try and parse attributes
+    compound_stmt = this.attributes(compound_stmt, [TokenKind.SYM_RBRACE]);
 
-    var { current, trivia } = this.advance();
+    // accept an lbrace
+    const { matched, node: lbrace_node } = this.accept(
+      TokenKind.SYM_LBRACE,
+      true
+    );
+    compound_stmt.children.push(lbrace_node);
 
-    /**
-     * This should be the main loop
-     */
-    /**
-     * NOTE(Nic):  this needs to be refactored into a loop that
-     * tries to parse as many statements as possible
-     */
-    if (current && current.kind === TokenKind.SYM_LBRACE) {
-      const stmt = this.single_stmt();
-      const { node } = this.accept(TokenKind.SYM_RBRACE, true);
-
-      compound_stmt.children.push(
-        {
-          kind: current.kind,
-          text: current.text,
-          leading_trivia: trivia,
-          trailing_trivia: [],
-        },
-        stmt,
-        node
-      );
-    } else {
-      // TODO(Nic): record an error, and return...
+    // parse 0 or more single statements
+    if (matched) {
+      let stmt = this.single_stmt();
+      while (stmt) {
+        compound_stmt.children.push(stmt);
+        stmt = this.single_stmt();
+      }
     }
+
+    // accept an rbrace
+    const { node: rbrace_node } = this.accept(TokenKind.SYM_RBRACE, true);
+    compound_stmt.children.push(rbrace_node);
 
     return this.absorb_trailing_trivia(compound_stmt);
   }
 
   single_stmt(): SyntaxNode {
-    const { current, trivia } = this.advance();
-
-    const stmt: SyntaxNode = {
+    let stmt: SyntaxNode = {
       kind: TokenKind.AST_COMPOUND_STATEMENT,
       children: [],
       leading_trivia: [],
       trailing_trivia: [],
     };
 
-    // parse return statement
-    if (current.kind === TokenKind.KEYWORD_RETURN) {
-      const expr = this.expr();
+    // parse leading attributes EVERYWHERE, and mark them as errors at the AST level,
+    // rather than the CST level, if they don't belong with a specific statement type
+    stmt = this.attributes(stmt, [
+      TokenKind.KEYWORD_RETURN,
+      TokenKind.KEYWORD_IF,
+      TokenKind.KEYWORD_SWITCH,
+      TokenKind.KEYWORD_LOOP,
+      TokenKind.KEYWORD_FOR,
+      TokenKind.KEYWORD_WHILE,
+      TokenKind.KEYWORD_VAR,
+      TokenKind.KEYWORD_CONST,
+      TokenKind.KEYWORD_LET,
+      TokenKind.KEYWORD_BREAK,
+      TokenKind.KEYWORD_CONTINUE,
+      TokenKind.SYM_LPAREN,
+      TokenKind.SYM_LBRACE,
+      TokenKind.SYM_AMP,
+      TokenKind.SYM_STAR,
+      TokenKind.KEYWORD_DISCARD,
+      TokenKind.KEYWORD_CONST_ASSERT,
+      TokenKind.SYM_IDENTIFIER, // for function calls.
+    ]);
 
-      stmt.children.push({
-        kind: current.kind,
-        text: current.text,
-        leading_trivia: trivia,
-        trailing_trivia: [],
-      });
+    // parse return statement
+    if (this.check(TokenKind.KEYWORD_RETURN)) {
+      stmt.kind = TokenKind.AST_RETURN_STATMENT;
+
+      const { node: ret_node } = this.accept(TokenKind.KEYWORD_RETURN, true);
+      stmt.children.push(ret_node);
+
+      const expr = this.expr();
       stmt.children.push(expr);
 
-      let { node } = this.accept(TokenKind.SYM_SEMICOLON, true);
-      stmt.children.push(node);
+      const { node: semicolon_node } = this.accept(
+        TokenKind.SYM_SEMICOLON,
+        true
+      );
+      stmt.children.push(semicolon_node);
 
       return this.absorb_trailing_trivia(stmt);
     }
 
     // parse if statement
+    if (this.check(TokenKind.KEYWORD_IF)) {
+      stmt.kind = TokenKind.AST_CONDITIONAL_STATEMENT;
+
+      const { node: if_node } = this.accept(TokenKind.KEYWORD_IF, true);
+      const if_branch: SyntaxNode = {
+        kind: TokenKind.AST_IF_BRANCH,
+        children: [if_node, this.expr(), this.compound_stmt()],
+        leading_trivia: [],
+        trailing_trivia: [],
+      };
+
+      stmt.children.push(if_branch);
+
+      if (!this.check(TokenKind.KEYWORD_ELSE)) {
+        return this.absorb_trailing_trivia(stmt);
+      }
+
+      // TODO(Nic): continue building the else cases here...
+    }
+
+    return null;
   }
 }
