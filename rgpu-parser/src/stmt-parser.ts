@@ -214,6 +214,41 @@ export class RGPUStmtParser extends RGPUParser {
     }
   }
 
+  type_alias_decl(): SyntaxNode {
+    // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-type_alias_decl)
+
+    const { matched: alias_matched, node: alias_node } = this.accept(
+      TokenKind.KEYWORD_ALIAS,
+      true
+    );
+    if (!alias_matched) return null;
+
+    const decl: SyntaxNode = {
+      kind: TokenKind.AST_ALIAS_DECLARATION,
+      children: [alias_node],
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
+
+    const { node: ident_node } = this.accept(TokenKind.SYM_IDENTIFIER, true);
+    decl.children.push(ident_node);
+
+    const { node: equals_node } = this.accept(TokenKind.SYM_EQUAL, true);
+    decl.children.push(equals_node);
+
+    const type = this.template_ident();
+    if (type) decl.children.push(type);
+    else
+      decl.children.push({
+        kind: TokenKind.ERR_ERROR,
+        text: "",
+        leading_trivia: [],
+        trailing_trivia: [],
+      });
+
+    return this.absorb_trailing_trivia(decl);
+  }
+
   global_var_decl(): SyntaxNode {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-global_variable_decl)'
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-global_value_decl)

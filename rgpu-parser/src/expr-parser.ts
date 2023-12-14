@@ -290,15 +290,8 @@ export class RGPUExprParser extends RGPUParser {
   }
 
   template_ident() {
-    let { matched, node: left } = this.accept(
-      TokenKind.SYM_IDENTIFIER,
-      true,
-      TokenKind.ERR_NONE
-    );
-
-    if (!matched) {
-      return null;
-    }
+    let { matched, node: left } = this.accept(TokenKind.SYM_IDENTIFIER, true);
+    if (!matched) return null;
 
     const template = this.template();
     if (template) {
