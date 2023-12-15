@@ -657,9 +657,36 @@ export class RGPUStmtParser extends RGPUParser {
 
       stmt.children.push(if_branch);
 
-      if (!this.check(TokenKind.KEYWORD_ELSE)) {
-        return this.absorb_trailing_trivia(stmt);
+      while (this.check(TokenKind.KEYWORD_ELSE)) {
+        const { node: else_node } = this.accept(TokenKind.KEYWORD_ELSE, true);
+        const { matched: if_matched, node: if_node } = this.accept(
+          TokenKind.KEYWORD_IF,
+          true
+        );
+
+        if (if_matched) {
+          // handle an else if condition...
+          const else_if_branch: SyntaxNode = {
+            kind: TokenKind.AST_ELSE_IF_BRANCH,
+            children: [else_node, if_node, this.expr(), this.compound_stmt()],
+            leading_trivia: [],
+            trailing_trivia: [],
+          };
+          stmt.children.push(else_if_branch);
+        } else {
+          // handle a pure else condition
+          const else_branch: SyntaxNode = {
+            kind: TokenKind.AST_ELSE_BRANCH,
+            children: [else_node, this.compound_stmt()],
+            leading_trivia: [],
+            trailing_trivia: [],
+          };
+
+          stmt.children.push(else_branch);
+        }
       }
+
+      return this.absorb_trailing_trivia(stmt);
 
       // TODO(Nic): continue building the else cases here...
     }

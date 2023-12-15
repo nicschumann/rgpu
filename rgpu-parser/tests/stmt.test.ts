@@ -72,7 +72,11 @@ describe("RGPU Statement Parser", () => {
   it("should parse single statements", () => {
     const lexer = new RPGUTokenizer();
     const parser = new RGPUStmtParser(new RGPUExprParser());
-    const testcases = ["return a + b;", "if (true) { return a + b; }"];
+    const testcases = [
+      "return a + b;",
+      "if (true) { return a + b; }",
+      "if a + b { return x; } else if a*2 == 3 {return y;}",
+    ];
 
     testcases.forEach((testcase) => {
       const tokens = lexer.tokenize_source(testcase);
