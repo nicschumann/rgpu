@@ -76,6 +76,12 @@ describe("RGPU Statement Parser", () => {
       "return a + b;",
       "if (true) { return a + b; }",
       "if a + b { return x; } else if a*2 == 3 {return y;}",
+      "if a + b { return x; } else if a*2 == 3 {return y;} else { return 3.0; }",
+      "switch x { default: { return a; } }",
+      "switch x { case default, x + 1 : { return a; } }",
+      "switch x { case 0, x { if (x == 0) {return a} else {return b} } case 3: { return b; } }",
+      "@binding(0) switch x @debug { \n case 0 @group(1) { return 1; }}",
+      // "switch x { case default: { return a; } }",
     ];
 
     testcases.forEach((testcase) => {

@@ -595,7 +595,7 @@ export class RGPUStmtParser extends RGPUParser {
 
   single_stmt(): SyntaxNode {
     let stmt: SyntaxNode = {
-      kind: TokenKind.AST_COMPOUND_STATEMENT,
+      kind: TokenKind.AST_STATEMENT,
       children: [],
       leading_trivia: [],
       trailing_trivia: [],
@@ -645,6 +645,7 @@ export class RGPUStmtParser extends RGPUParser {
 
     // parse if statement
     if (this.check(TokenKind.KEYWORD_IF)) {
+      // [this](https://www.w3.org/TR/WGSL/#syntax-if_statement)
       stmt.kind = TokenKind.AST_CONDITIONAL_STATEMENT;
 
       const { node: if_node } = this.accept(TokenKind.KEYWORD_IF, true);
@@ -687,8 +688,108 @@ export class RGPUStmtParser extends RGPUParser {
       }
 
       return this.absorb_trailing_trivia(stmt);
+    }
 
-      // TODO(Nic): continue building the else cases here...
+    if (this.check(TokenKind.KEYWORD_SWITCH)) {
+      // [this](https://www.w3.org/TR/WGSL/#syntax-switch_statement)
+
+      stmt.kind = TokenKind.AST_SWITCH_STATEMENT;
+
+      const { node: switch_node } = this.accept(TokenKind.KEYWORD_SWITCH, true);
+
+      stmt.children.push(switch_node, this.expr());
+      stmt = this.attributes(stmt, [TokenKind.SYM_LBRACE]);
+
+      const { node: lbrace_node } = this.accept(TokenKind.SYM_LBRACE, true);
+      stmt.children.push(lbrace_node);
+
+      while (
+        this.check(TokenKind.KEYWORD_CASE) ||
+        this.check(TokenKind.KEYWORD_DEFAULT)
+      ) {
+        if (this.check(TokenKind.KEYWORD_CASE)) {
+          const { node: case_node } = this.accept(TokenKind.KEYWORD_CASE, true);
+
+          let case_statement: SyntaxNode = {
+            kind: TokenKind.AST_SWITCH_DEFAULT,
+            children: [case_node],
+            leading_trivia: [],
+            trailing_trivia: [],
+          };
+
+          let case_condition: SyntaxNode = {
+            kind: TokenKind.AST_SWITCH_CASE_CONDITION,
+            children: [],
+            leading_trivia: [],
+            trailing_trivia: [],
+          };
+
+          // maybe parse first clause
+          let { matched: def_matched, node: def_node } = this.accept(
+            TokenKind.KEYWORD_DEFAULT,
+            true
+          );
+          if (def_matched) case_condition.children.push(def_node);
+          else case_condition.children.push(this.expr());
+
+          while (this.check(TokenKind.SYM_COMMA)) {
+            let { node: com_node } = this.accept(TokenKind.SYM_COMMA, true);
+            case_condition.children.push(com_node);
+
+            if (
+              this.check(TokenKind.SYM_COLON) ||
+              this.check(TokenKind.SYM_AT) ||
+              this.check(TokenKind.SYM_LBRACE)
+            )
+              break;
+
+            const { matched: def_matched, node: def_node } = this.accept(
+              TokenKind.KEYWORD_DEFAULT,
+              true
+            );
+            if (def_matched) case_condition.children.push(def_node);
+            else case_condition.children.push(this.expr());
+          }
+
+          case_statement.children.push(case_condition);
+
+          const { matched: colon_matched, node: colon_node } = this.accept(
+            TokenKind.SYM_COLON,
+            true
+          );
+          if (colon_matched) case_statement.children.push(colon_node);
+
+          case_statement.children.push(this.compound_stmt());
+          stmt.children.push(case_statement);
+        } else {
+          // must be default.
+          const { node: def_node } = this.accept(
+            TokenKind.KEYWORD_DEFAULT,
+            true
+          );
+          const { matched: colon_matched, node: colon_node } = this.accept(
+            TokenKind.SYM_COLON,
+            true
+          );
+
+          let default_stmt: SyntaxNode = {
+            kind: TokenKind.AST_SWITCH_DEFAULT,
+            children: [def_node],
+            leading_trivia: [],
+            trailing_trivia: [],
+          };
+
+          if (colon_matched) default_stmt.children.push(colon_node);
+
+          default_stmt.children.push(this.compound_stmt());
+          stmt.children.push(default_stmt);
+        }
+      }
+
+      const { node: rbrace_node } = this.accept(TokenKind.SYM_RBRACE, true);
+      stmt.children.push(rbrace_node);
+
+      return this.absorb_trailing_trivia(stmt);
     }
 
     return null;
