@@ -792,6 +792,69 @@ export class RGPUStmtParser extends RGPUParser {
       return this.absorb_trailing_trivia(stmt);
     }
 
+    if (this.check(TokenKind.KEYWORD_LOOP)) {
+      // [here](https://www.w3.org/TR/WGSL/#syntax-loop_statement)
+      stmt.kind = TokenKind.AST_LOOP_STATEMENT;
+
+      const { node: loop_node } = this.accept(TokenKind.KEYWORD_LOOP, true);
+      stmt.children.push(loop_node);
+
+      stmt = this.attributes(stmt, [TokenKind.SYM_RBRACE]);
+      stmt.children.push(this.compound_stmt());
+
+      return this.absorb_trailing_trivia(stmt);
+    }
+
+    if (this.check(TokenKind.KEYWORD_CONTINUING)) {
+      // [here](https://www.w3.org/TR/WGSL/#syntax-continuing_statement)
+      stmt.kind = TokenKind.AST_CONTINUING_STATMENT;
+      const { node: cont_node } = this.accept(
+        TokenKind.KEYWORD_CONTINUING,
+        true
+      );
+      stmt.children.push(cont_node);
+      stmt.children.push(this.compound_stmt());
+
+      return this.absorb_trailing_trivia(stmt);
+    }
+
+    if (this.check(TokenKind.KEYWORD_CONTINUING)) {
+      // [here](https://www.w3.org/TR/WGSL/#syntax-continuing_statement)
+      stmt.kind = TokenKind.AST_CONTINUING_STATMENT;
+      const { node: ct_node } = this.accept(TokenKind.KEYWORD_CONTINUING, true);
+      stmt.children.push(ct_node);
+      stmt.children.push(this.compound_stmt());
+
+      return this.absorb_trailing_trivia(stmt);
+    }
+
+    if (this.check(TokenKind.KEYWORD_BREAK)) {
+      // [this](https://www.w3.org/TR/WGSL/#syntax-break_if_statement)
+      // also beak statement
+
+      const { node: brk_node } = this.accept(TokenKind.KEYWORD_BREAK, true);
+      stmt.children.push(brk_node);
+
+      const { matched: if_matched, node: if_node } = this.accept(
+        TokenKind.KEYWORD_IF,
+        true
+      );
+      if (if_matched) {
+        // break if stmt
+        stmt.children.push(if_node);
+        stmt.kind = TokenKind.AST_BREAK_IF_STATEMENT;
+        stmt.children.push(this.expr());
+      } else {
+        // break stmt
+        stmt.kind = TokenKind.AST_BREAK_STATEMENT;
+      }
+
+      const { node: sc_node } = this.accept(TokenKind.SYM_SEMICOLON, true);
+      stmt.children.push(sc_node);
+
+      return this.absorb_trailing_trivia(stmt);
+    }
+
     return null;
   }
 }
