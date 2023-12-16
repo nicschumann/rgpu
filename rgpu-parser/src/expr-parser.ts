@@ -323,6 +323,93 @@ export class RGPUExprParser extends RGPUParser {
     return this.absorb_trailing_trivia(left);
   }
 
+  lhs(): SyntaxNode {
+    const lhs: SyntaxNode = {
+      kind: TokenKind.AST_LHS_EXPRESSION,
+      children: [],
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
+
+    if (this.check(TokenKind.SYM_STAR)) {
+      const { node } = this.accept(TokenKind.SYM_STAR, true);
+      lhs.children.push(node, this.lhs());
+      return this.absorb_trailing_trivia(lhs);
+    }
+
+    if (this.check(TokenKind.SYM_AMP)) {
+      const { node } = this.accept(TokenKind.SYM_AMP, true);
+      lhs.children.push(node, this.lhs());
+      return this.absorb_trailing_trivia(lhs);
+    }
+
+    if (this.check(TokenKind.SYM_LPAREN)) {
+      const { node: lparen_node } = this.accept(TokenKind.SYM_LPAREN, true);
+      lhs.children.push(lparen_node, this.lhs());
+
+      const { node: rparen_node } = this.accept(TokenKind.SYM_RPAREN, true);
+      lhs.children.push(rparen_node);
+      return this.absorb_trailing_trivia(lhs);
+    }
+
+    // Should this actually just parse an identifier?
+    const ident = this.template_ident();
+    if (ident) {
+      lhs.children.push(ident);
+    } else {
+      lhs.children.push({
+        kind: TokenKind.ERR_ERROR,
+        text: "",
+        leading_trivia: [],
+        trailing_trivia: [],
+      });
+    }
+
+    const maybe_specifier = this.component_specifier();
+    if (maybe_specifier) lhs.children.push(maybe_specifier);
+
+    return this.absorb_trailing_trivia(lhs);
+  }
+
+  private component_specifier(): SyntaxNode {
+    // [here](https://www.w3.org/TR/WGSL/#syntax-component_or_swizzle_specifier)
+    if (!(this.check(TokenKind.SYM_LBRACKET) || this.check(TokenKind.SYM_DOT)))
+      return null;
+
+    // TODO(Nic): continue here
+    // https://www.w3.org/TR/WGSL/#syntax-component_or_swizzle_specifier
+    const spec_node: SyntaxNode = {
+      kind: TokenKind.AST_LHS_COMPONENT_SPECIFIER,
+      children: [],
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
+
+    if (this.check(TokenKind.SYM_LBRACKET)) {
+      const { node: lbracket_node } = this.accept(TokenKind.SYM_LBRACKET, true);
+      spec_node.children.push(lbracket_node, this.expr());
+
+      const { node: rbracket_node } = this.accept(TokenKind.SYM_RBRACKET, true);
+      spec_node.children.push(rbracket_node);
+
+      const maybe_specifier = this.component_specifier();
+      if (maybe_specifier) spec_node.children.push(maybe_specifier);
+
+      return this.absorb_trailing_trivia(spec_node);
+    } else if (this.check(TokenKind.SYM_DOT)) {
+      const { node: dot_node } = this.accept(TokenKind.SYM_DOT, true);
+      spec_node.children.push(dot_node);
+
+      const { node: ident_node } = this.accept(TokenKind.SYM_IDENTIFIER, true);
+      spec_node.children.push(ident_node);
+
+      const maybe_specifier = this.component_specifier();
+      if (maybe_specifier) spec_node.children.push(maybe_specifier);
+
+      return this.absorb_trailing_trivia(spec_node);
+    }
+  }
+
   expr(precedence: number = 0): SyntaxNode {
     let { current, trivia: leading_trivia } = this.advance();
     let left = this.parse_prefix(current);

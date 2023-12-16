@@ -108,6 +108,9 @@ export enum TokenKind {
   AST_ARRAY_ACCESS,
   AST_ARRAY_INDEX,
 
+  AST_LHS_EXPRESSION,
+  AST_LHS_COMPONENT_SPECIFIER,
+
   // AST Tags for Statements
   AST_COMPOUND_STATEMENT,
   AST_STATEMENT,
@@ -138,6 +141,12 @@ export enum TokenKind {
   AST_BREAK_IF_STATEMENT,
 
   AST_BREAK_STATEMENT,
+
+  AST_CONTINUE_STATEMENT,
+
+  AST_DISCARD_STATEMENT,
+
+  AST_DECLARATION_STATEMENT,
 
   // Tags for Errors
   ERR_ERROR,
@@ -469,11 +478,11 @@ export const tokenDefinitions: TokenData[] = [
     re: "!",
   },
   {
-    type: TokenKind.SYM_LPAREN,
+    type: TokenKind.SYM_LBRACKET,
     re: "\\[",
   },
   {
-    type: TokenKind.SYM_RPAREN,
+    type: TokenKind.SYM_RBRACKET,
     re: "\\]",
   },
   {

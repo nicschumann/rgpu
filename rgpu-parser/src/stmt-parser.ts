@@ -355,6 +355,7 @@ export class RGPUStmtParser extends RGPUParser {
     // handle global var declaration and override declaration
     decl = this.attributes(decl, [
       TokenKind.KEYWORD_VAR,
+      TokenKind.KEYWORD_LET,
       TokenKind.KEYWORD_OVERRIDE,
       TokenKind.KEYWORD_CONST,
     ]);
@@ -407,15 +408,23 @@ export class RGPUStmtParser extends RGPUParser {
       }
 
       return this.absorb_trailing_trivia(decl);
-    } else if (this.check(TokenKind.KEYWORD_CONST)) {
+    } else if (
+      this.check(TokenKind.KEYWORD_CONST) ||
+      this.check(TokenKind.KEYWORD_LET)
+    ) {
       if (decl.children.length) {
         // we parsed some attributes, but const should not have attributes.
         // mark them as errors.
         decl.children.forEach((child) => (child.kind = TokenKind.ERR_ERROR));
       }
 
-      const { node } = this.accept(TokenKind.KEYWORD_CONST, true);
-      decl.children.push(node);
+      if (this.check(TokenKind.KEYWORD_CONST)) {
+        const { node } = this.accept(TokenKind.KEYWORD_CONST, true);
+        decl.children.push(node);
+      } else {
+        const { node } = this.accept(TokenKind.KEYWORD_LET, true);
+        decl.children.push(node);
+      }
 
       const ident = this.maybe_typed_ident();
       if (ident) {
@@ -848,6 +857,52 @@ export class RGPUStmtParser extends RGPUParser {
         // break stmt
         stmt.kind = TokenKind.AST_BREAK_STATEMENT;
       }
+
+      const { node: sc_node } = this.accept(TokenKind.SYM_SEMICOLON, true);
+      stmt.children.push(sc_node);
+
+      return this.absorb_trailing_trivia(stmt);
+    }
+
+    if (this.check(TokenKind.KEYWORD_CONTINUE)) {
+      // [this](https://www.w3.org/TR/WGSL/#syntax-break_if_statement)
+      // also beak statement
+      stmt.kind = TokenKind.AST_CONTINUE_STATEMENT;
+
+      const { node: cont_node } = this.accept(TokenKind.KEYWORD_CONTINUE, true);
+      stmt.children.push(cont_node);
+
+      const { node: sc_node } = this.accept(TokenKind.SYM_SEMICOLON, true);
+      stmt.children.push(sc_node);
+
+      return this.absorb_trailing_trivia(stmt);
+    }
+
+    if (this.check(TokenKind.KEYWORD_DISCARD)) {
+      // [this](https://www.w3.org/TR/WGSL/#syntax-statement) notated inline...
+
+      stmt.kind = TokenKind.AST_DISCARD_STATEMENT;
+
+      const { node: cont_node } = this.accept(TokenKind.KEYWORD_DISCARD, true);
+      stmt.children.push(cont_node);
+
+      const { node: sc_node } = this.accept(TokenKind.SYM_SEMICOLON, true);
+      stmt.children.push(sc_node);
+
+      return this.absorb_trailing_trivia(stmt);
+    }
+
+    if (
+      this.check(TokenKind.KEYWORD_VAR) ||
+      this.check(TokenKind.KEYWORD_CONST) ||
+      this.check(TokenKind.KEYWORD_LET)
+    ) {
+      // [this](https://www.w3.org/TR/WGSL/#syntax-variable_or_value_statement)
+
+      stmt.kind = TokenKind.AST_DECLARATION_STATEMENT;
+      // NOTE(Nic): there are certain cases where global var decl is not what we want,
+      // but in our case, more permissive is good.
+      stmt.children.push(this.global_var_decl());
 
       const { node: sc_node } = this.accept(TokenKind.SYM_SEMICOLON, true);
       stmt.children.push(sc_node);

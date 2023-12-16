@@ -83,7 +83,8 @@ describe("RGPU Statement Parser", () => {
       "@binding(0) switch x @debug { \n case 0 @group(1) { return 1; }}",
       "switch x { case default: { return a; } }",
       "loop { return a; continuing { break if i < 4; } }",
-      "loop { return a; continuing @group(0) { break if i < 4; } }",
+      "loop { let a = 10; return a; continuing @group(0) { break if i < 4; } }",
+      "var<storage> a = 3.0;",
     ];
 
     testcases.forEach((testcase) => {
@@ -95,7 +96,7 @@ describe("RGPU Statement Parser", () => {
       const cst = parser.single_stmt();
       const serialized = serialize_nodes(cst);
 
-      console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
 
       expect(serialized).to.deep.equal(testcase);
     });

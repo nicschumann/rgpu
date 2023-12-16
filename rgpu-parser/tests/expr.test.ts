@@ -187,6 +187,27 @@ describe("RGPU Expression Parser", () => {
     });
   });
 
+  it("should parse lhs expressions", () => {
+    const lexer = new RPGUTokenizer();
+    const parser = new RGPUExprParser();
+    const testcases = ["a", "&a", "*(a)", "a[x + 1]", "a[x_1 + a].xyx[0].a"];
+
+    testcases.forEach((testcase) => {
+      const tokens = lexer.tokenize_source(testcase);
+
+      // if you need to debug token stream...
+      // console.log(tokens);
+
+      parser.reset(tokens);
+      const cst = parser.lhs();
+      const serialized = serialize_nodes(cst);
+
+      console.log(JSON.stringify(simplify_cst(cst), null, 4));
+
+      expect(serialized).to.deep.equal(testcase);
+    });
+  });
+
   it("should parse error nodes", () => {
     const lexer = new RPGUTokenizer();
     const parser = new RGPUExprParser();
