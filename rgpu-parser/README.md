@@ -1,12 +1,12 @@
 ### Statement Types
 
-- [] `';'`
+- [ ] `';'`
 - [x] return_statement `';'`
 - [x] if_statement
 - [x] switch_statement
 - [x] loop_statement
-- [] for_statement
-- [] while_statement
+- [x] for_statement
+- [ ] while_statement
 - [x] func_call_statement `';'`
 - [x] variable_or_value_statement `';'`
 - [x] break_statement `';'`

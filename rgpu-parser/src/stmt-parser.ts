@@ -1,7 +1,13 @@
 import { RGPUExprParser } from "./expr-parser";
 import { RGPUParser } from "./parser";
 import { TokenKind } from "./tokens";
-import { SyntaxNode, Token, assignment_op_types } from "./types";
+import {
+  SyntaxNode,
+  Token,
+  assignment_op_types,
+  assignment_or_expr_tokens,
+  local_declaration_tokens,
+} from "./types";
 
 const zero_arg_attribute_names: Set<string> = new Set([
   "const",
@@ -362,15 +368,26 @@ export class RGPUStmtParser extends RGPUParser {
 
     if (this.check(TokenKind.KEYWORD_VAR)) {
       const var_decl = this.var_decl();
+
       if (var_decl) {
-        decl.children.push(var_decl);
+        decl.children.push(...var_decl.children);
       } else {
-        decl.children.push({
-          kind: TokenKind.ERR_ERROR,
-          text: "",
-          leading_trivia: [],
-          trailing_trivia: [],
-        });
+        // two errors, one for the missing var,
+        // one for the missing ident node
+        decl.children.push(
+          {
+            kind: TokenKind.ERR_ERROR,
+            text: "",
+            leading_trivia: [],
+            trailing_trivia: [],
+          },
+          {
+            kind: TokenKind.ERR_ERROR,
+            text: "",
+            leading_trivia: [],
+            trailing_trivia: [],
+          }
+        );
       }
 
       const { matched, node } = this.accept(TokenKind.SYM_EQUAL, true);
@@ -924,6 +941,106 @@ export class RGPUStmtParser extends RGPUParser {
       return this.absorb_trailing_trivia(stmt);
     }
 
+    if (this.check(TokenKind.KEYWORD_FOR)) {
+      // [here](https://www.w3.org/TR/WGSL/#syntax-for_statement)
+      stmt.kind = TokenKind.AST_FOR_STATEMENT;
+
+      const { node: for_node } = this.accept(TokenKind.KEYWORD_FOR, true);
+      stmt.children.push(for_node);
+
+      const { node: lparen_node } = this.accept(TokenKind.SYM_LPAREN, true);
+      stmt.children.push(lparen_node);
+
+      let for_header: SyntaxNode = {
+        kind: TokenKind.AST_FOR_HEADER,
+        children: [],
+        leading_trivia: [],
+        trailing_trivia: [],
+      };
+
+      // for INIT
+      if (!this.check(TokenKind.SYM_SEMICOLON)) {
+        if (
+          this.next_token() &&
+          assignment_or_expr_tokens.has(this.next_token().kind)
+        ) {
+          const assign = this.assignment_or_expr({
+            kind: TokenKind.AST_STATEMENT,
+            children: [],
+            leading_trivia: [],
+            trailing_trivia: [],
+          });
+          for_header.children.push(assign);
+        } else if (
+          this.next_token() &&
+          local_declaration_tokens.has(this.next_token().kind)
+        ) {
+          // try and parse a local declaration.
+          const decl = this.global_var_decl();
+          for_header.children.push(decl);
+        }
+      }
+
+      const { node: s1_node } = this.accept(TokenKind.SYM_SEMICOLON, true);
+      for_header.children.push(s1_node);
+
+      // for CONDITION
+      if (!this.check(TokenKind.SYM_SEMICOLON)) {
+        for_header.children.push(this.expr());
+      }
+
+      const { node: s2_node } = this.accept(TokenKind.SYM_SEMICOLON, true);
+      for_header.children.push(s2_node);
+
+      // for UPDATE
+      if (!this.check(TokenKind.SYM_RPAREN)) {
+        if (
+          this.next_token() &&
+          assignment_or_expr_tokens.has(this.next_token().kind)
+        ) {
+          const assign = this.assignment_or_expr({
+            kind: TokenKind.AST_STATEMENT,
+            children: [],
+            leading_trivia: [],
+            trailing_trivia: [],
+          });
+          for_header.children.push(assign);
+        }
+      }
+
+      stmt.children.push(for_header);
+
+      const { node: rparen_node } = this.accept(TokenKind.SYM_RPAREN, true);
+      stmt.children.push(rparen_node);
+      stmt.children.push(this.compound_stmt());
+
+      return this.absorb_trailing_trivia(stmt);
+    }
+
+    if (
+      this.check(TokenKind.SYM_STAR) ||
+      this.check(TokenKind.SYM_AMP) ||
+      this.check(TokenKind.SYM_LPAREN) ||
+      this.check(TokenKind.SYM_UNDERSCORE) ||
+      this.check(TokenKind.SYM_IDENTIFIER)
+    ) {
+      // variable updating assignment
+      stmt = this.assignment_or_expr(stmt);
+
+      const { node: semicolon_node } = this.accept(
+        TokenKind.SYM_SEMICOLON,
+        true
+      );
+
+      stmt.children.push(semicolon_node);
+
+      return this.absorb_trailing_trivia(stmt);
+    }
+
+    return null;
+  }
+
+  private assignment_or_expr(stmt: SyntaxNode): SyntaxNode {
     if (
       this.check(TokenKind.SYM_STAR) ||
       this.check(TokenKind.SYM_AMP) ||
@@ -975,13 +1092,6 @@ export class RGPUStmtParser extends RGPUParser {
       } else {
         stmt.kind = TokenKind.AST_FUNCTION_CALL_STATEMENT;
       }
-
-      const { node: semicolon_node } = this.accept(
-        TokenKind.SYM_SEMICOLON,
-        true
-      );
-
-      stmt.children.push(semicolon_node);
 
       return this.absorb_trailing_trivia(stmt);
     }

@@ -85,11 +85,13 @@ describe("RGPU Statement Parser", () => {
       "loop { return a; continuing { break if i < 4; } }",
       "loop { let a = 10; return a; continuing @group(0) { break if i < 4; } }",
       "var<storage> a = 3.0;",
-      "const_assert x > 0;",
+      "const_assert (x > 0);",
       "a *= 2.0;",
       "a[0].x /= f(32, f(1));",
       "_ *= f(x);", // technically, an error...
       "*a++;",
+      "for (var a = 0; a <= x + 1 ; a++) { a = a + 1; b *= f(x); }",
+      "for (var a:vec2<i32> = vec2(); ; a.x++) { a.x = a.y + 1; a.y *= f(x); }",
     ];
 
     testcases.forEach((testcase) => {

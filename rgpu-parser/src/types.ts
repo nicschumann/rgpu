@@ -159,3 +159,17 @@ export const assignment_op_types: Set<TokenKind> = new Set([
   TokenKind.SYM_GREATER_GREATER_EQUAL,
   TokenKind.SYM_LESS_LESS_EQUAL,
 ]);
+
+export const assignment_or_expr_tokens: Set<TokenKind> = new Set([
+  TokenKind.SYM_STAR,
+  TokenKind.SYM_AMP,
+  TokenKind.SYM_LPAREN,
+  TokenKind.SYM_UNDERSCORE,
+  TokenKind.SYM_IDENTIFIER,
+]);
+
+export const local_declaration_tokens: Set<TokenKind> = new Set([
+  TokenKind.KEYWORD_VAR,
+  TokenKind.KEYWORD_LET,
+  TokenKind.KEYWORD_CONST, // NOTE(Nic): maybe take this out?
+]);
