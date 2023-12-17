@@ -167,7 +167,7 @@ export class RGPUExprParser extends RGPUParser {
     };
   }
 
-  private parse_call_expression(
+  parse_call_expression(
     left: SyntaxNode,
     token: Token,
     closing_token_kind: TokenKind,

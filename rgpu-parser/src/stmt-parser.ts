@@ -1,7 +1,7 @@
 import { RGPUExprParser } from "./expr-parser";
 import { RGPUParser } from "./parser";
 import { TokenKind } from "./tokens";
-import { SyntaxNode, Token } from "./types";
+import { SyntaxNode, Token, assignment_op_types } from "./types";
 
 const zero_arg_attribute_names: Set<string> = new Set([
   "const",
@@ -839,7 +839,7 @@ export class RGPUStmtParser extends RGPUParser {
 
     if (this.check(TokenKind.KEYWORD_BREAK)) {
       // [this](https://www.w3.org/TR/WGSL/#syntax-break_if_statement)
-      // also beak statement
+      // also break statement
 
       const { node: brk_node } = this.accept(TokenKind.KEYWORD_BREAK, true);
       stmt.children.push(brk_node);
@@ -865,8 +865,8 @@ export class RGPUStmtParser extends RGPUParser {
     }
 
     if (this.check(TokenKind.KEYWORD_CONTINUE)) {
-      // [this](https://www.w3.org/TR/WGSL/#syntax-break_if_statement)
-      // also beak statement
+      // [here](https://www.w3.org/TR/WGSL/#syntax-continue_statement)
+
       stmt.kind = TokenKind.AST_CONTINUE_STATEMENT;
 
       const { node: cont_node } = this.accept(TokenKind.KEYWORD_CONTINUE, true);
@@ -906,6 +906,82 @@ export class RGPUStmtParser extends RGPUParser {
 
       const { node: sc_node } = this.accept(TokenKind.SYM_SEMICOLON, true);
       stmt.children.push(sc_node);
+
+      return this.absorb_trailing_trivia(stmt);
+    }
+
+    if (this.check(TokenKind.KEYWORD_CONST_ASSERT)) {
+      // [here](https://www.w3.org/TR/WGSL/#syntax-const_assert_statement)
+
+      stmt.kind = TokenKind.AST_CONST_ASSERT_STATEMENT;
+      // NOTE(Nic): there are certain cases where global var decl is not what we want,
+      // but in our case, more permissive is good.
+      stmt.children.push(this.const_assert());
+
+      const { node: sc_node } = this.accept(TokenKind.SYM_SEMICOLON, true);
+      stmt.children.push(sc_node);
+
+      return this.absorb_trailing_trivia(stmt);
+    }
+
+    if (
+      this.check(TokenKind.SYM_STAR) ||
+      this.check(TokenKind.SYM_AMP) ||
+      this.check(TokenKind.SYM_LPAREN) ||
+      this.check(TokenKind.SYM_UNDERSCORE) ||
+      this.check(TokenKind.SYM_IDENTIFIER)
+    ) {
+      // variable updating assignment
+      if (this.check(TokenKind.SYM_UNDERSCORE)) {
+        stmt.kind = TokenKind.AST_DISCARDING_ASSIGNMENT_STATEMENT;
+        const { node: underscore_node } = this.accept(
+          TokenKind.SYM_UNDERSCORE,
+          true
+        );
+        stmt.children.push(underscore_node);
+      } else {
+        stmt.children.push(this.expr());
+      }
+
+      if (
+        this.next_token() &&
+        assignment_op_types.has(this.next_token().kind)
+      ) {
+        // this is an assignment
+        stmt.kind = TokenKind.AST_UPDATING_ASSIGNMENT_STATEMENT;
+        const { current, trivia } = this.advance();
+        stmt.children.push(
+          {
+            kind: current.kind,
+            text: current.text,
+            leading_trivia: trivia,
+            trailing_trivia: [],
+          },
+          this.expr()
+        );
+      } else if (
+        this.check(TokenKind.SYM_DASH_DASH) ||
+        this.check(TokenKind.SYM_PLUS_PLUS)
+      ) {
+        stmt.kind = TokenKind.AST_UPDATING_ASSIGNMENT_STATEMENT;
+
+        const { current, trivia } = this.advance();
+        stmt.children.push({
+          kind: current.kind,
+          text: current.text,
+          leading_trivia: trivia,
+          trailing_trivia: [],
+        });
+      } else {
+        stmt.kind = TokenKind.AST_FUNCTION_CALL_STATEMENT;
+      }
+
+      const { node: semicolon_node } = this.accept(
+        TokenKind.SYM_SEMICOLON,
+        true
+      );
+
+      stmt.children.push(semicolon_node);
 
       return this.absorb_trailing_trivia(stmt);
     }

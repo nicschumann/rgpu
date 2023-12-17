@@ -7,11 +7,11 @@
 - [x] loop_statement
 - [] for_statement
 - [] while_statement
-- [] func_call_statement `';'`
+- [x] func_call_statement `';'`
 - [x] variable_or_value_statement `';'`
 - [x] break_statement `';'`
 - [x] continue_statement `';'`
 - [x] `'discard'` `';'`
-- [] variable_updating_statement `';'`
+- [x] variable_updating_statement `';'`
 - [x] compound_statement
-- [] const_assert_statement `';'
+- [x] const_assert_statement `';'

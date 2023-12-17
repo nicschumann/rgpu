@@ -199,10 +199,10 @@ describe("RGPU Expression Parser", () => {
       // console.log(tokens);
 
       parser.reset(tokens);
-      const cst = parser.lhs();
+      const cst = parser.expr();
       const serialized = serialize_nodes(cst);
 
-      console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
 
       expect(serialized).to.deep.equal(testcase);
     });
@@ -222,6 +222,11 @@ describe("RGPU Expression Parser", () => {
         input: "a * b b; // test",
         parse: "a * b ",
         remaining: "b; // test",
+      },
+      {
+        input: "f<vec2, 3>(a, y) =",
+        parse: "f<vec2, 3>(a, y) ",
+        remaining: "=",
       },
     ];
 

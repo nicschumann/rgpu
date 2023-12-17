@@ -145,3 +145,17 @@ export const binary_op_types: Set<TokenKind> = new Set([
   TokenKind.SYM_AMP_AMP,
   TokenKind.SYM_BAR_BAR,
 ]);
+
+export const assignment_op_types: Set<TokenKind> = new Set([
+  TokenKind.SYM_EQUAL,
+  TokenKind.SYM_PLUS_EQUAL,
+  TokenKind.SYM_STAR_EQUAL,
+  TokenKind.SYM_AMP_EQUAL,
+  TokenKind.SYM_BAR_EQUAL,
+  TokenKind.SYM_DASH_EQUAL,
+  TokenKind.SYM_CARAT_EQUAL,
+  TokenKind.SYM_SLASH_EQUAL,
+  TokenKind.SYM_PERCENT_EQUAL,
+  TokenKind.SYM_GREATER_GREATER_EQUAL,
+  TokenKind.SYM_LESS_LESS_EQUAL,
+]);
