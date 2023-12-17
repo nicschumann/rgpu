@@ -6,7 +6,7 @@
 - [x] switch_statement
 - [x] loop_statement
 - [x] for_statement
-- [ ] while_statement
+- [x] while_statement
 - [x] func_call_statement `';'`
 - [x] variable_or_value_statement `';'`
 - [x] break_statement `';'`

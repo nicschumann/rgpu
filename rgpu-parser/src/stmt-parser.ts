@@ -594,7 +594,7 @@ export class RGPUStmtParser extends RGPUParser {
     };
 
     // Try and parse attributes
-    compound_stmt = this.attributes(compound_stmt, [TokenKind.SYM_RBRACE]);
+    compound_stmt = this.attributes(compound_stmt, [TokenKind.SYM_LBRACE]);
 
     // accept an lbrace
     const { matched, node: lbrace_node } = this.accept(
@@ -825,7 +825,19 @@ export class RGPUStmtParser extends RGPUParser {
       const { node: loop_node } = this.accept(TokenKind.KEYWORD_LOOP, true);
       stmt.children.push(loop_node);
 
-      stmt = this.attributes(stmt, [TokenKind.SYM_RBRACE]);
+      stmt.children.push(this.compound_stmt());
+
+      return this.absorb_trailing_trivia(stmt);
+    }
+
+    if (this.check(TokenKind.KEYWORD_WHILE)) {
+      // [here](https://www.w3.org/TR/WGSL/#syntax-while_statement)
+      stmt.kind = TokenKind.AST_WHITE_STATEMENT;
+
+      const { node: while_node } = this.accept(TokenKind.KEYWORD_WHILE, true);
+      stmt.children.push(while_node);
+
+      stmt.children.push(this.expr());
       stmt.children.push(this.compound_stmt());
 
       return this.absorb_trailing_trivia(stmt);

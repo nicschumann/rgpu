@@ -82,7 +82,7 @@ describe("RGPU Statement Parser", () => {
       "switch x { case 0, x { if (x == 0) {return a} else {return b} } case 3: { return b; } }",
       "@binding(0) switch x @debug { \n case 0 @group(1) { return 1; }}",
       "switch x { case default: { return a; } }",
-      "loop { return a; continuing { break if i < 4; } }",
+      "loop @group(0) { return a; continuing { break if i < 4; } }",
       "loop { let a = 10; return a; continuing @group(0) { break if i < 4; } }",
       "var<storage> a = 3.0;",
       "const_assert (x > 0);",
@@ -92,6 +92,7 @@ describe("RGPU Statement Parser", () => {
       "*a++;",
       "for (var a = 0; a <= x + 1 ; a++) { a = a + 1; b *= f(x); }",
       "for (var a:vec2<i32> = vec2(); ; a.x++) { a.x = a.y + 1; a.y *= f(x); }",
+      "while x <= 100 { a = f(a); x += 1; break if x <0 ;}",
     ];
 
     testcases.forEach((testcase) => {
