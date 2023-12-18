@@ -68,7 +68,9 @@ export class RGPUStmtParser extends RGPUParser {
     return expr;
   }
 
-  maybe_typed_ident(): SyntaxNode {
+  optionally_typed_ident(): SyntaxNode {
+    // [here](https://www.w3.org/TR/WGSL/#syntax-optionally_typed_ident)
+
     let { matched, node: decl } = this.accept(TokenKind.SYM_IDENTIFIER, true);
     if (!matched) {
       return decl;
@@ -125,7 +127,7 @@ export class RGPUStmtParser extends RGPUParser {
         trailing_trivia: [],
       };
 
-      const ident = this.maybe_typed_ident();
+      const ident = this.optionally_typed_ident();
       if (ident) {
         decl.children.push(ident);
       } else {
@@ -138,30 +140,35 @@ export class RGPUStmtParser extends RGPUParser {
       }
 
       const { matched, node } = this.accept(TokenKind.SYM_EQUAL, true);
-
-      if (matched) {
-        decl.children.push(node);
-        const expr = this.expr();
-        decl.children.push(expr);
-      }
+      if (matched) decl.children.push(node, this.expr());
 
       return this.absorb_trailing_trivia(decl);
+    } else if (this.check(TokenKind.KEYWORD_VAR)) {
+      const { node } = this.accept(TokenKind.KEYWORD_VAR, true);
 
-      // we need to parse a const or a let declaration
-    } else {
-      const decl = this.var_decl();
-      if (!decl) return null;
+      const decl: SyntaxNode = {
+        kind: TokenKind.AST_VAR_DECLARATION,
+        children: [node],
+        leading_trivia: [],
+        trailing_trivia: [],
+      };
 
-      const { matched, node } = this.accept(TokenKind.SYM_EQUAL, true);
+      let var_template = this.template();
+      if (var_template) decl.children.push(var_template);
 
-      if (matched) {
-        decl.children.push(node);
-        const expr = this.expr();
-        decl.children.push(expr);
-      }
+      const ident = this.optionally_typed_ident();
+      decl.children.push(ident);
+
+      const { matched, node: equal_node } = this.accept(
+        TokenKind.SYM_EQUAL,
+        true
+      );
+      if (matched) decl.children.push(equal_node, this.expr());
 
       return this.absorb_trailing_trivia(decl);
     }
+
+    return null; // rule didn't match
   }
 
   const_assert(): SyntaxNode {
@@ -186,294 +193,63 @@ export class RGPUStmtParser extends RGPUParser {
     return this.absorb_trailing_trivia(decl);
   }
 
-  struct_decl(): SyntaxNode {
-    // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-struct_decl)
-
-    const { matched: struct_matched, node: struct_node } = this.accept(
-      TokenKind.KEYWORD_STRUCT,
-      true
-    );
-    if (!struct_matched) return null;
-
-    const decl: SyntaxNode = {
-      kind: TokenKind.AST_STRUCT_DECLRATAION,
-      children: [struct_node],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
-
-    const { node: ident_node } = this.accept(TokenKind.SYM_IDENTIFIER, true);
-    decl.children.push(ident_node);
-
-    const { matched: lparen_matched, node: lparen_node } = this.accept(
-      TokenKind.SYM_LBRACE,
-      true
-    );
-    decl.children.push(lparen_node);
-
-    if (lparen_matched) {
-      while (
-        this.check(TokenKind.SYM_AT) ||
-        this.check(TokenKind.SYM_IDENTIFIER) ||
-        this.check(TokenKind.SYM_COMMA)
-      ) {
-        // try and parse a member identifier...
-        let struct_member: SyntaxNode = {
-          kind: TokenKind.AST_STRUCT_MEMBER,
-          children: [],
-          leading_trivia: [],
-          trailing_trivia: [],
-        };
-
-        struct_member = this.attributes(struct_member, [
-          TokenKind.SYM_IDENTIFIER,
-        ]);
-
-        const typed_ident = this.maybe_typed_ident();
-        struct_member.children.push(typed_ident);
-        decl.children.push(struct_member);
-
-        const { matched: comma_matched, node: comma_node } = this.accept(
-          TokenKind.SYM_COMMA,
+  private assignment_or_expr(stmt: SyntaxNode): SyntaxNode {
+    if (
+      this.check(TokenKind.SYM_STAR) ||
+      this.check(TokenKind.SYM_AMP) ||
+      this.check(TokenKind.SYM_LPAREN) ||
+      this.check(TokenKind.SYM_UNDERSCORE) ||
+      this.check(TokenKind.SYM_IDENTIFIER)
+    ) {
+      // variable updating assignment
+      if (this.check(TokenKind.SYM_UNDERSCORE)) {
+        stmt.kind = TokenKind.AST_DISCARDING_ASSIGNMENT_STATEMENT;
+        const { node: underscore_node } = this.accept(
+          TokenKind.SYM_UNDERSCORE,
           true
         );
-
-        if (!comma_matched && this.check(TokenKind.SYM_RBRACE)) break;
-        decl.children.push(comma_node);
-      }
-    }
-
-    const { node: rparen_node } = this.accept(TokenKind.SYM_RBRACE, true);
-    decl.children.push(rparen_node);
-
-    return this.absorb_trailing_trivia(decl);
-  }
-
-  type_alias_decl(): SyntaxNode {
-    // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-type_alias_decl)
-
-    const { matched: alias_matched, node: alias_node } = this.accept(
-      TokenKind.KEYWORD_ALIAS,
-      true
-    );
-    if (!alias_matched) return null;
-
-    const decl: SyntaxNode = {
-      kind: TokenKind.AST_ALIAS_DECLARATION,
-      children: [alias_node],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
-
-    const { node: ident_node } = this.accept(TokenKind.SYM_IDENTIFIER, true);
-    decl.children.push(ident_node);
-
-    const { node: equals_node } = this.accept(TokenKind.SYM_EQUAL, true);
-    decl.children.push(equals_node);
-
-    const type = this.template_ident();
-    if (type) decl.children.push(type);
-    else
-      decl.children.push({
-        kind: TokenKind.ERR_ERROR,
-        text: "",
-        leading_trivia: [],
-        trailing_trivia: [],
-      });
-
-    return this.absorb_trailing_trivia(decl);
-  }
-
-  global_var_decl(): SyntaxNode {
-    // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-global_variable_decl)'
-    // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-global_value_decl)
-
-    let decl: SyntaxNode = {
-      kind: TokenKind.AST_GLOBAL_VAR_DECLARATION,
-      children: [],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
-
-    /**
-     * NOTE(Nic): I am diverging from the spec here to make the parsing
-     * a bit more robust. keyword_const does not accept attributes infront
-     * of it, but I will parse them anyway, and then mark those nodes as errors
-     * if they are present.
-     */
-
-    // handle global var declaration and override declaration
-    decl = this.attributes(decl, [
-      TokenKind.KEYWORD_VAR,
-      TokenKind.KEYWORD_LET,
-      TokenKind.KEYWORD_OVERRIDE,
-      TokenKind.KEYWORD_CONST,
-    ]);
-
-    if (this.check(TokenKind.KEYWORD_VAR)) {
-      const var_decl = this.var_decl();
-
-      if (var_decl) {
-        decl.children.push(...var_decl.children);
+        stmt.children.push(underscore_node);
       } else {
-        // two errors, one for the missing var,
-        // one for the missing ident node
-        decl.children.push(
+        stmt.children.push(this.expr());
+      }
+
+      if (
+        this.next_token() &&
+        assignment_op_types.has(this.next_token().kind)
+      ) {
+        // this is an assignment
+        stmt.kind = TokenKind.AST_UPDATING_ASSIGNMENT_STATEMENT;
+        const { current, trivia } = this.advance();
+        stmt.children.push(
           {
-            kind: TokenKind.ERR_ERROR,
-            text: "",
-            leading_trivia: [],
+            kind: current.kind,
+            text: current.text,
+            leading_trivia: trivia,
             trailing_trivia: [],
           },
-          {
-            kind: TokenKind.ERR_ERROR,
-            text: "",
-            leading_trivia: [],
-            trailing_trivia: [],
-          }
+          this.expr()
         );
-      }
+      } else if (
+        this.check(TokenKind.SYM_DASH_DASH) ||
+        this.check(TokenKind.SYM_PLUS_PLUS)
+      ) {
+        stmt.kind = TokenKind.AST_UPDATING_ASSIGNMENT_STATEMENT;
 
-      const { matched, node } = this.accept(TokenKind.SYM_EQUAL, true);
-
-      if (matched) {
-        decl.children.push(node);
-        const expr = this.expr();
-        decl.children.push(expr);
-      }
-    } else if (this.check(TokenKind.KEYWORD_OVERRIDE)) {
-      const { node } = this.accept(TokenKind.KEYWORD_OVERRIDE, true);
-      decl.children.push(node);
-
-      const ident = this.maybe_typed_ident();
-      if (ident) {
-        decl.children.push(ident);
-      } else {
-        decl.children.push({
-          kind: TokenKind.ERR_ERROR,
-          text: "",
-          leading_trivia: [],
+        const { current, trivia } = this.advance();
+        stmt.children.push({
+          kind: current.kind,
+          text: current.text,
+          leading_trivia: trivia,
           trailing_trivia: [],
         });
-      }
-
-      const { matched, node: equal_node } = this.accept(
-        TokenKind.SYM_EQUAL,
-        true
-      );
-
-      if (matched) {
-        decl.children.push(equal_node);
-        const expr = this.expr();
-        decl.children.push(expr);
-      }
-
-      return this.absorb_trailing_trivia(decl);
-    } else if (
-      this.check(TokenKind.KEYWORD_CONST) ||
-      this.check(TokenKind.KEYWORD_LET)
-    ) {
-      if (decl.children.length) {
-        // we parsed some attributes, but const should not have attributes.
-        // mark them as errors.
-        decl.children.forEach((child) => (child.kind = TokenKind.ERR_ERROR));
-      }
-
-      if (this.check(TokenKind.KEYWORD_CONST)) {
-        const { node } = this.accept(TokenKind.KEYWORD_CONST, true);
-        decl.children.push(node);
       } else {
-        const { node } = this.accept(TokenKind.KEYWORD_LET, true);
-        decl.children.push(node);
+        stmt.kind = TokenKind.AST_FUNCTION_CALL_STATEMENT;
       }
 
-      const ident = this.maybe_typed_ident();
-      if (ident) {
-        decl.children.push(ident);
-      } else {
-        decl.children.push({
-          kind: TokenKind.ERR_ERROR,
-          text: "",
-          leading_trivia: [],
-          trailing_trivia: [],
-        });
-      }
-
-      const { matched, node: equal_node } = this.accept(
-        TokenKind.SYM_EQUAL,
-        true
-      );
-      decl.children.push(equal_node);
-
-      const expr = this.expr();
-      decl.children.push(expr);
-    } else {
-      // error case...
-      decl.children.push({
-        kind: TokenKind.ERR_ERROR,
-        text: "",
-        leading_trivia: [],
-        trailing_trivia: [],
-      });
+      return this.absorb_trailing_trivia(stmt);
     }
 
-    return this.absorb_trailing_trivia(decl);
-  }
-
-  var_decl(): SyntaxNode {
-    // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-variable_decl)
-    let { matched, node } = this.accept(TokenKind.KEYWORD_VAR, true);
-
-    if (!matched) return null;
-
-    const decl: SyntaxNode = {
-      kind: TokenKind.AST_VAR_DECLARATION,
-      children: [node],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
-
-    let var_template = this.template();
-    if (var_template) decl.children.push(var_template);
-
-    const ident = this.maybe_typed_ident();
-    decl.children.push(ident);
-
-    return this.absorb_trailing_trivia(decl);
-  }
-
-  compound_stmt(): SyntaxNode {
-    let compound_stmt: SyntaxNode = {
-      kind: TokenKind.AST_COMPOUND_STATEMENT,
-      children: [],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
-
-    // Try and parse attributes
-    compound_stmt = this.attributes(compound_stmt, [TokenKind.SYM_LBRACE]);
-
-    // accept an lbrace
-    const { matched, node: lbrace_node } = this.accept(
-      TokenKind.SYM_LBRACE,
-      true
-    );
-    compound_stmt.children.push(lbrace_node);
-
-    // parse 0 or more single statements
-    if (matched) {
-      let stmt = this.single_stmt();
-      while (stmt) {
-        compound_stmt.children.push(stmt);
-        stmt = this.single_stmt();
-      }
-    }
-
-    // accept an rbrace
-    const { node: rbrace_node } = this.accept(TokenKind.SYM_RBRACE, true);
-    compound_stmt.children.push(rbrace_node);
-
-    return this.absorb_trailing_trivia(compound_stmt);
+    return null; // rule didn't match
   }
 
   single_stmt(): SyntaxNode {
@@ -920,62 +696,37 @@ export class RGPUStmtParser extends RGPUParser {
     return null;
   }
 
-  private assignment_or_expr(stmt: SyntaxNode): SyntaxNode {
-    if (
-      this.check(TokenKind.SYM_STAR) ||
-      this.check(TokenKind.SYM_AMP) ||
-      this.check(TokenKind.SYM_LPAREN) ||
-      this.check(TokenKind.SYM_UNDERSCORE) ||
-      this.check(TokenKind.SYM_IDENTIFIER)
-    ) {
-      // variable updating assignment
-      if (this.check(TokenKind.SYM_UNDERSCORE)) {
-        stmt.kind = TokenKind.AST_DISCARDING_ASSIGNMENT_STATEMENT;
-        const { node: underscore_node } = this.accept(
-          TokenKind.SYM_UNDERSCORE,
-          true
-        );
-        stmt.children.push(underscore_node);
-      } else {
-        stmt.children.push(this.expr());
+  compound_stmt(): SyntaxNode {
+    let compound_stmt: SyntaxNode = {
+      kind: TokenKind.AST_COMPOUND_STATEMENT,
+      children: [],
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
+
+    // Try and parse attributes
+    compound_stmt = this.attributes(compound_stmt, [TokenKind.SYM_LBRACE]);
+
+    // accept an lbrace
+    const { matched, node: lbrace_node } = this.accept(
+      TokenKind.SYM_LBRACE,
+      true
+    );
+    compound_stmt.children.push(lbrace_node);
+
+    // parse 0 or more single statements
+    if (matched) {
+      let stmt = this.single_stmt();
+      while (stmt) {
+        compound_stmt.children.push(stmt);
+        stmt = this.single_stmt();
       }
-
-      if (
-        this.next_token() &&
-        assignment_op_types.has(this.next_token().kind)
-      ) {
-        // this is an assignment
-        stmt.kind = TokenKind.AST_UPDATING_ASSIGNMENT_STATEMENT;
-        const { current, trivia } = this.advance();
-        stmt.children.push(
-          {
-            kind: current.kind,
-            text: current.text,
-            leading_trivia: trivia,
-            trailing_trivia: [],
-          },
-          this.expr()
-        );
-      } else if (
-        this.check(TokenKind.SYM_DASH_DASH) ||
-        this.check(TokenKind.SYM_PLUS_PLUS)
-      ) {
-        stmt.kind = TokenKind.AST_UPDATING_ASSIGNMENT_STATEMENT;
-
-        const { current, trivia } = this.advance();
-        stmt.children.push({
-          kind: current.kind,
-          text: current.text,
-          leading_trivia: trivia,
-          trailing_trivia: [],
-        });
-      } else {
-        stmt.kind = TokenKind.AST_FUNCTION_CALL_STATEMENT;
-      }
-
-      return this.absorb_trailing_trivia(stmt);
     }
 
-    return null;
+    // accept an rbrace
+    const { node: rbrace_node } = this.accept(TokenKind.SYM_RBRACE, true);
+    compound_stmt.children.push(rbrace_node);
+
+    return this.absorb_trailing_trivia(compound_stmt);
   }
 }
