@@ -7,13 +7,16 @@ import {
 } from "../src/expr-parser";
 import { RGPUAttrParser } from "../src/attr-parser";
 import { RGPUDeclParser } from "../src/decl-parser";
+import { RGPUStmtParser } from "../src/stmt-parser";
 
 describe("RGPU Declaration Parser", () => {
   it("should parse global variable and value declarations", () => {
     const lexer = new RPGUTokenizer();
     const expr_parser = new RGPUExprParser();
     const attr_parser = new RGPUAttrParser(expr_parser);
-    const parser = new RGPUDeclParser(expr_parser, attr_parser);
+    const stmt_parser = new RGPUStmtParser(expr_parser, attr_parser);
+    const parser = new RGPUDeclParser(expr_parser, attr_parser, stmt_parser);
+
     const testcases = [
       "@group(0) @binding(1) var<uniform, read> a = 1",
       "@workgroup_(0,1,2) var<uniform, read> a : array<f32, 2> = a + b",
@@ -49,7 +52,8 @@ describe("RGPU Declaration Parser", () => {
     const lexer = new RPGUTokenizer();
     const expr_parser = new RGPUExprParser();
     const attr_parser = new RGPUAttrParser(expr_parser);
-    const parser = new RGPUDeclParser(expr_parser, attr_parser);
+    const stmt_parser = new RGPUStmtParser(expr_parser, attr_parser);
+    const parser = new RGPUDeclParser(expr_parser, attr_parser, stmt_parser);
     const testcases = [
       "alias a = int",
       "alias a = array<vec2, 3>",
@@ -80,7 +84,8 @@ describe("RGPU Declaration Parser", () => {
     const lexer = new RPGUTokenizer();
     const expr_parser = new RGPUExprParser();
     const attr_parser = new RGPUAttrParser(expr_parser);
-    const parser = new RGPUDeclParser(expr_parser, attr_parser);
+    const stmt_parser = new RGPUStmtParser(expr_parser, attr_parser);
+    const parser = new RGPUDeclParser(expr_parser, attr_parser, stmt_parser);
     const testcases = [
       "struct test {}",
       "struct test {,}", // error case
@@ -112,7 +117,8 @@ describe("RGPU Declaration Parser", () => {
     const lexer = new RPGUTokenizer();
     const expr_parser = new RGPUExprParser();
     const attr_parser = new RGPUAttrParser(expr_parser);
-    const parser = new RGPUDeclParser(expr_parser, attr_parser);
+    const stmt_parser = new RGPUStmtParser(expr_parser, attr_parser);
+    const parser = new RGPUDeclParser(expr_parser, attr_parser, stmt_parser);
     const testcases = ["const_assert a < 23 + b"];
 
     testcases.forEach((testcase) => {
@@ -127,6 +133,35 @@ describe("RGPU Declaration Parser", () => {
 
       // console.log(JSON.stringify(cst, null, 4));
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(parser.remaining());
+
+      expect(serialized).to.deep.equal(testcase);
+    });
+  });
+
+  it("should function declarations", () => {
+    const lexer = new RPGUTokenizer();
+    const expr_parser = new RGPUExprParser();
+    const attr_parser = new RGPUAttrParser(expr_parser);
+    const stmt_parser = new RGPUStmtParser(expr_parser, attr_parser);
+    const parser = new RGPUDeclParser(expr_parser, attr_parser, stmt_parser);
+    const testcases = [
+      "fn main(@builtin(vertex_position) x: vec2<i32>) { return 0; }",
+      "fn main(@builtin(vertex_position) v: vec2<i32>, y: i32 ) -> @builtin(vertex_position) vec4<f32> { return v.x + y; }",
+    ];
+
+    testcases.forEach((testcase) => {
+      const tokens = lexer.tokenize_source(testcase);
+
+      // if you need to debug token stream...
+      // console.log(tokens);
+      parser.reset(tokens);
+      const cst = parser.global_function_decl();
+
+      const serialized = serialize_nodes(cst);
+
+      // console.log(JSON.stringify(cst, null, 4));
+      console.log(JSON.stringify(simplify_cst(cst), null, 4));
       // console.log(parser.remaining());
 
       expect(serialized).to.deep.equal(testcase);

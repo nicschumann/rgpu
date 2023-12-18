@@ -1,17 +1,24 @@
 import { RGPUAttrParser } from "./attr-parser";
 import { RGPUExprParser } from "./expr-parser";
 import { RGPUParser } from "./parser";
+import { RGPUStmtParser } from "./stmt-parser";
 import { TokenKind } from "./tokens";
 import { SyntaxNode } from "./types";
 
 export class RGPUDeclParser extends RGPUParser {
   private expr_parser: RGPUExprParser;
   private attr_parser: RGPUAttrParser;
+  private stmt_parser: RGPUStmtParser;
 
-  constructor(expr_parser: RGPUExprParser, attr_parser: RGPUAttrParser) {
+  constructor(
+    expr_parser: RGPUExprParser,
+    attr_parser: RGPUAttrParser,
+    stmt_parser: RGPUStmtParser
+  ) {
     super();
     this.expr_parser = expr_parser;
     this.attr_parser = attr_parser;
+    this.stmt_parser = stmt_parser;
   }
 
   private expr(): SyntaxNode {
@@ -52,6 +59,16 @@ export class RGPUDeclParser extends RGPUParser {
     this.attr_parser.reset(tokens);
     const expr = this.attr_parser.attributes(decl, terminals);
     const { tokens: remaining_tokens } = this.attr_parser.remaining();
+    this.reset(remaining_tokens);
+
+    return expr;
+  }
+
+  private compound_stmt(): SyntaxNode {
+    const tokens = this.tokens.slice(this.current_position + 1);
+    this.stmt_parser.reset(tokens);
+    const expr = this.stmt_parser.compound_stmt();
+    const { tokens: remaining_tokens } = this.stmt_parser.remaining();
     this.reset(remaining_tokens);
 
     return expr;
@@ -368,5 +385,92 @@ export class RGPUDeclParser extends RGPUParser {
     }
 
     return this.absorb_trailing_trivia(decl);
+  }
+
+  private param(): SyntaxNode {
+    let param: SyntaxNode = {
+      kind: TokenKind.AST_FUNCTION_PARAMETER,
+      children: [],
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
+
+    param = this.attributes(param, [TokenKind.SYM_IDENTIFIER]);
+    param.children.push(this.optionally_typed_ident());
+
+    return param;
+  }
+
+  global_function_decl(): SyntaxNode {
+    let decl: SyntaxNode = {
+      kind: TokenKind.AST_FUNCTION_DECLARATION,
+      children: [],
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
+
+    // handle leading attributes on function decl
+    decl = this.attributes(decl, [TokenKind.KEYWORD_FN]);
+
+    if (this.check(TokenKind.KEYWORD_FN)) {
+      const { node: fn_node } = this.accept(TokenKind.KEYWORD_FN, true);
+      decl.children.push(fn_node);
+
+      const { node: ident_node } = this.accept(TokenKind.SYM_IDENTIFIER, true);
+      decl.children.push(ident_node);
+
+      const { node: lparen_node } = this.accept(TokenKind.SYM_LPAREN, true);
+      decl.children.push(lparen_node);
+
+      const params: SyntaxNode = {
+        kind: TokenKind.AST_FUNCTION_PARAMETERS,
+        children: [],
+        leading_trivia: [],
+        trailing_trivia: [],
+      };
+
+      let matched = true;
+      while (matched && !this.check(TokenKind.SYM_RPAREN)) {
+        // try to parse an expression with the subparser
+        params.children.push(this.param());
+
+        // now, accept either an R_PAREN, or a COMMA and an RPAREN
+        let { matched: comma_matched, node: maybe_comma_node } = this.accept(
+          TokenKind.SYM_COMMA,
+          true
+        );
+
+        if (comma_matched) params.children.push(maybe_comma_node);
+
+        matched = comma_matched;
+      }
+
+      const { node: rparen_node } = this.accept(TokenKind.SYM_RPAREN, true);
+      decl.children.push(params, rparen_node);
+
+      if (this.check(TokenKind.SYM_DASH_GREATER)) {
+        // parse a return tupe
+        const { node: arrow_node } = this.accept(
+          TokenKind.SYM_DASH_GREATER,
+          true
+        );
+        decl.children.push(arrow_node);
+
+        let ret_type: SyntaxNode = {
+          kind: TokenKind.AST_FUNCTION_RETURN_TYPE,
+          children: [],
+          leading_trivia: [],
+          trailing_trivia: [],
+        };
+
+        ret_type = this.attributes(ret_type, [TokenKind.SYM_IDENTIFIER]);
+        ret_type.children.push(this.template_ident());
+        decl.children.push(ret_type);
+      }
+
+      decl.children.push(this.compound_stmt());
+
+      return this.absorb_trailing_trivia(decl);
+    }
   }
 }

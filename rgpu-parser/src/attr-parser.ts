@@ -46,7 +46,7 @@ export class RGPUAttrParser extends RGPUParser {
 
   private attribute_args(
     attr: SyntaxNode,
-    max_num_params: 1 | 2 | 3
+    max_num_params: -1 | 1 | 2 | 3
   ): SyntaxNode {
     // try to match a paren...
     let { node: maybe_lparen_node } = this.accept(TokenKind.SYM_LPAREN, true);
@@ -57,7 +57,7 @@ export class RGPUAttrParser extends RGPUParser {
 
     while (
       matched &&
-      params_parsed < max_num_params &&
+      (params_parsed < max_num_params || max_num_params == -1) &&
       !this.check(TokenKind.SYM_RPAREN)
     ) {
       // try to parse an expression with the subparser
@@ -89,6 +89,14 @@ export class RGPUAttrParser extends RGPUParser {
     while ((attribute = this.attribute()) !== null) {
       if (attribute.kind === TokenKind.ERR_ERROR) {
         const consumed = this.advance_until(terminal_set);
+
+        /**
+         * NOTE(Nic): there's a situation where we fail to parse an
+         * attribute, and we're stuck in the middle of an unclosed paren,
+         * where this method can fail properly recover. This is especially true
+         * when the terminal set contains SYM_IDENTIFIER, or another symbol, that
+         * may be part of an attribute expression...
+         */
 
         attribute.children.push({
           kind: TokenKind.ERR_ERROR,
@@ -126,38 +134,58 @@ export class RGPUAttrParser extends RGPUParser {
       trailing_trivia: [],
     };
 
+    /**
+     * NOTE(Nic): this is a much more permissive version of a
+     * attribute parsing, where we just allow any number of parameters for
+     * any attribute of any name, rather than respecting the keywords
+     * defined in the spec. In a later pass, we validate that these
+     * attributes are actually correct and meaningful.
+     */
     if (
       current.kind === TokenKind.KEYWORD_CONST ||
-      (current.kind === TokenKind.SYM_IDENTIFIER &&
-        zero_arg_attribute_names.has(current.text))
-    ) {
-      return this.absorb_trailing_trivia(attr);
-    }
-
-    if (
-      current.kind === TokenKind.SYM_IDENTIFIER &&
-      single_arg_attribute_names.has(current.text)
-    ) {
-      attr = this.attribute_args(attr, 1);
-      return this.absorb_trailing_trivia(attr);
-    }
-
-    if (
       current.kind === TokenKind.KEYWORD_DIAGNOSTIC ||
-      (current.kind === TokenKind.SYM_IDENTIFIER &&
-        double_arg_attribute_names.has(current.text))
+      current.kind === TokenKind.SYM_IDENTIFIER
     ) {
-      attr = this.attribute_args(attr, 2);
+      // we could mark the nodes as errors here, if they don't conform to the spec.
+      if (this.check(TokenKind.SYM_LPAREN)) {
+        attr = this.attribute_args(attr, -1);
+      }
+
       return this.absorb_trailing_trivia(attr);
     }
 
-    if (
-      current.kind === TokenKind.SYM_IDENTIFIER &&
-      triple_arg_attribute_names.has(current.text)
-    ) {
-      attr = this.attribute_args(attr, 3);
-      return this.absorb_trailing_trivia(attr);
-    }
+    // if (
+    //   current.kind === TokenKind.KEYWORD_CONST ||
+    //   (current.kind === TokenKind.SYM_IDENTIFIER &&
+    //     zero_arg_attribute_names.has(current.text))
+    // ) {
+    //   return this.absorb_trailing_trivia(attr);
+    // }
+
+    // if (
+    //   current.kind === TokenKind.SYM_IDENTIFIER &&
+    //   single_arg_attribute_names.has(current.text)
+    // ) {
+    //   attr = this.attribute_args(attr, 1);
+    //   return this.absorb_trailing_trivia(attr);
+    // }
+
+    // if (
+    //   current.kind === TokenKind.KEYWORD_DIAGNOSTIC ||
+    //   (current.kind === TokenKind.SYM_IDENTIFIER &&
+    //     double_arg_attribute_names.has(current.text))
+    // ) {
+    //   attr = this.attribute_args(attr, 2);
+    //   return this.absorb_trailing_trivia(attr);
+    // }
+
+    // if (
+    //   current.kind === TokenKind.SYM_IDENTIFIER &&
+    //   triple_arg_attribute_names.has(current.text)
+    // ) {
+    //   attr = this.attribute_args(attr, 3);
+    //   return this.absorb_trailing_trivia(attr);
+    // }
 
     // if we got here, we didn't match a valid attribute term
     // return an error.
