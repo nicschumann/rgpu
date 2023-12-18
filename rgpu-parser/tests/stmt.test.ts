@@ -108,7 +108,7 @@ describe("RGPU Statement Parser", () => {
       const cst = parser.single_stmt();
       const serialized = serialize_nodes(cst);
 
-      console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
 
       expect(serialized).to.deep.equal(testcase);
     });
