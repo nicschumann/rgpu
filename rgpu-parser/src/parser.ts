@@ -3,6 +3,7 @@ import {
   AcceptData,
   AdvanceData,
   RemainingData,
+  SyntaxNode,
   Token,
   TriviaData,
   trivia_types,
@@ -169,5 +170,20 @@ export class RGPUParser {
     ) {
       this.next_position += 1;
     }
+  }
+
+  /**
+   *
+   * @param node
+   * @returns
+   */
+  protected absorb_trailing_trivia(node: SyntaxNode): SyntaxNode {
+    const { trivia: trailing_trivia } = this.skip_trivia(
+      this.current_position + 1,
+      true
+    );
+    node.trailing_trivia.push(...trailing_trivia);
+
+    return node;
   }
 }

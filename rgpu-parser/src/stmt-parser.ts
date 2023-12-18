@@ -40,16 +40,6 @@ export class RGPUStmtParser extends RGPUParser {
     this.expr_parser = expr_parser;
   }
 
-  private absorb_trailing_trivia(node: SyntaxNode): SyntaxNode {
-    const { trivia: trailing_trivia } = this.skip_trivia(
-      this.current_position + 1,
-      true
-    );
-    node.trailing_trivia.push(...trailing_trivia);
-
-    return node;
-  }
-
   /**
    * NOTE(Nic): definitely refactor these expressions that
    * prepare the subparser state and then call a specific sub-parse

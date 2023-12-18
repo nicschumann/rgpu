@@ -53,17 +53,6 @@ export function simplify_cst(syntax: SyntaxNode): SimplifiedSyntaxNode {
 }
 
 export class RGPUExprParser extends RGPUParser {
-  private absorb_trailing_trivia(node: SyntaxNode): SyntaxNode {
-    const { trivia: final_trivia } = this.skip_trivia(
-      this.current_position + 1,
-      true
-    );
-
-    node.trailing_trivia.push(...final_trivia);
-
-    return node;
-  }
-
   private precedence(): number {
     const next = this.next_token();
     if (!next || !binary_op_types.has(next.kind)) return 0;
