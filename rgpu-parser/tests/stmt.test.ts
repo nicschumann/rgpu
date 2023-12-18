@@ -93,6 +93,7 @@ describe("RGPU Statement Parser", () => {
       "for (var a = 0; a <= x + 1 ; a++) { a = a + 1; b *= f(x); }",
       "for (var a:vec2<i32> = vec2(); ; a.x++) { a.x = a.y + 1; a.y *= f(x); }",
       "while x <= 100 { a = f(a); x += 1; break if x <0 ;}",
+      "while x != b { ; }",
     ];
 
     testcases.forEach((testcase) => {

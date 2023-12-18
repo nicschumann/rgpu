@@ -650,6 +650,18 @@ export class RGPUStmtParser extends RGPUParser {
       TokenKind.SYM_IDENTIFIER, // for function calls.
     ]);
 
+    if (this.check(TokenKind.SYM_SEMICOLON)) {
+      // empty statement
+      stmt.kind = TokenKind.AST_EMPTY_STATEMENT;
+      const { node: semicolon_node } = this.accept(
+        TokenKind.SYM_SEMICOLON,
+        true
+      );
+      stmt.children.push(semicolon_node);
+
+      return this.absorb_trailing_trivia(stmt);
+    }
+
     // parse return statement
     if (this.check(TokenKind.KEYWORD_RETURN)) {
       stmt.kind = TokenKind.AST_RETURN_STATMENT;

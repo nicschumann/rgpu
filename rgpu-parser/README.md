@@ -1,6 +1,6 @@
 ### Statement Types
 
-- [ ] `';'`
+- [x] `';'`
 - [x] return_statement `';'`
 - [x] if_statement
 - [x] switch_statement
