@@ -943,7 +943,7 @@ export class RGPUStmtParser extends RGPUParser {
       stmt.kind = TokenKind.AST_DECLARATION_STATEMENT;
       // NOTE(Nic): there are certain cases where global var decl is not what we want,
       // but in our case, more permissive is good.
-      stmt.children.push(this.global_var_decl());
+      stmt.children.push(this.var_stmt());
 
       const { node: sc_node } = this.accept(TokenKind.SYM_SEMICOLON, true);
       stmt.children.push(sc_node);
@@ -1000,8 +1000,7 @@ export class RGPUStmtParser extends RGPUParser {
           local_declaration_tokens.has(this.next_token().kind)
         ) {
           // try and parse a local declaration.
-          const decl = this.global_var_decl();
-          for_header.children.push(decl);
+          for_header.children.push(this.var_stmt());
         }
       }
 
