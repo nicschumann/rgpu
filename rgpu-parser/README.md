@@ -1,4 +1,8 @@
-### Statement Types
+# RGPU Parser
+
+`rgpu-parser` is a permissive parser for [WGSL](https://www.w3.org/TR/WGSL/), the shading language for webgpu. It is designed to be integrated with linters and semantic analysis tools, rather than compilers. It emphasizes parsing permissively, in the sense that it partially parses syntactically incorrect programs, so that linting rules can be applied to valid subtrees of the parse. This is because it is meant to be integrated into editors, where most input programs are "in progress", rather than compilers, where most input programs are "done".
+
+## Statement Types
 
 - [x] `';'`
 - [x] return_statement `';'`

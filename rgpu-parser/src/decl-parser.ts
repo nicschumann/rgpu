@@ -11,14 +11,15 @@ export class RGPUDeclParser extends RGPUParser {
   private stmt_parser: RGPUStmtParser;
 
   constructor(
-    expr_parser: RGPUExprParser,
-    attr_parser: RGPUAttrParser,
-    stmt_parser: RGPUStmtParser
+    expr_parser?: RGPUExprParser,
+    attr_parser?: RGPUAttrParser,
+    stmt_parser?: RGPUStmtParser
   ) {
     super();
-    this.expr_parser = expr_parser;
-    this.attr_parser = attr_parser;
-    this.stmt_parser = stmt_parser;
+    this.expr_parser = expr_parser || new RGPUExprParser();
+    this.attr_parser = attr_parser || new RGPUAttrParser(this.expr_parser);
+    this.stmt_parser =
+      stmt_parser || new RGPUStmtParser(this.expr_parser, this.attr_parser);
   }
 
   private expr(): SyntaxNode {
@@ -112,7 +113,7 @@ export class RGPUDeclParser extends RGPUParser {
     return this.absorb_trailing_trivia(decl);
   }
 
-  const_assert(): SyntaxNode {
+  const_assert(decl?: SyntaxNode): SyntaxNode {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-const_assert_statement)
 
     const { matched: ca_matched, node: ca_node } = this.accept(
@@ -121,12 +122,17 @@ export class RGPUDeclParser extends RGPUParser {
     );
     if (!ca_matched) return null;
 
-    const decl: SyntaxNode = {
-      kind: TokenKind.AST_CONST_ASSERT,
-      children: [ca_node],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
+    if (typeof decl === "undefined") {
+      decl = {
+        kind: TokenKind.AST_CONST_ASSERT,
+        children: [ca_node],
+        leading_trivia: [],
+        trailing_trivia: [],
+      };
+    } else {
+      decl.kind = TokenKind.AST_CONST_ASSERT;
+      decl.children.push(ca_node);
+    }
 
     const expr = this.expr();
     decl.children.push(expr);
@@ -134,7 +140,7 @@ export class RGPUDeclParser extends RGPUParser {
     return this.absorb_trailing_trivia(decl);
   }
 
-  struct_decl(): SyntaxNode {
+  struct_decl(decl?: SyntaxNode): SyntaxNode {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-struct_decl)
 
     const { matched: struct_matched, node: struct_node } = this.accept(
@@ -143,12 +149,17 @@ export class RGPUDeclParser extends RGPUParser {
     );
     if (!struct_matched) return null;
 
-    const decl: SyntaxNode = {
-      kind: TokenKind.AST_STRUCT_DECLRATAION,
-      children: [struct_node],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
+    if (typeof decl === "undefined") {
+      decl = {
+        kind: TokenKind.AST_STRUCT_DECLRATAION,
+        children: [struct_node],
+        leading_trivia: [],
+        trailing_trivia: [],
+      };
+    } else {
+      decl.kind = TokenKind.AST_STRUCT_DECLRATAION;
+      decl.children.push(struct_node);
+    }
 
     const { node: ident_node } = this.accept(TokenKind.SYM_IDENTIFIER, true);
     decl.children.push(ident_node);
@@ -197,7 +208,7 @@ export class RGPUDeclParser extends RGPUParser {
     return this.absorb_trailing_trivia(decl);
   }
 
-  type_alias_decl(): SyntaxNode {
+  type_alias_decl(decl?: SyntaxNode): SyntaxNode {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-type_alias_decl)
 
     const { matched: alias_matched, node: alias_node } = this.accept(
@@ -206,12 +217,17 @@ export class RGPUDeclParser extends RGPUParser {
     );
     if (!alias_matched) return null;
 
-    const decl: SyntaxNode = {
-      kind: TokenKind.AST_ALIAS_DECLARATION,
-      children: [alias_node],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
+    if (typeof decl === "undefined") {
+      decl = {
+        kind: TokenKind.AST_ALIAS_DECLARATION,
+        children: [alias_node],
+        leading_trivia: [],
+        trailing_trivia: [],
+      };
+    } else {
+      decl.kind = TokenKind.AST_ALIAS_DECLARATION;
+      decl.children.push(alias_node);
+    }
 
     const { node: ident_node } = this.accept(TokenKind.SYM_IDENTIFIER, true);
     decl.children.push(ident_node);
@@ -254,16 +270,29 @@ export class RGPUDeclParser extends RGPUParser {
     return this.absorb_trailing_trivia(decl);
   }
 
-  global_var_decl(): SyntaxNode {
+  global_var_decl(decl?: SyntaxNode): SyntaxNode {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-global_variable_decl)'
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-global_value_decl)
+    if (typeof decl === "undefined") {
+      // if we are not passed a decl, we assume it needs attributes parsed.
+      decl = {
+        kind: TokenKind.AST_GLOBAL_VAR_DECLARATION,
+        children: [],
+        leading_trivia: [],
+        trailing_trivia: [],
+      };
 
-    let decl: SyntaxNode = {
-      kind: TokenKind.AST_GLOBAL_VAR_DECLARATION,
-      children: [],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
+      // handle global var declaration and override declaration
+      decl = this.attributes(decl, [
+        TokenKind.KEYWORD_VAR,
+        TokenKind.KEYWORD_LET,
+        TokenKind.KEYWORD_OVERRIDE,
+        TokenKind.KEYWORD_CONST,
+      ]);
+    } else {
+      // else we just label it and assume attributes are parsed.
+      decl.kind = TokenKind.AST_GLOBAL_VAR_DECLARATION;
+    }
 
     /**
      * NOTE(Nic): I am diverging from the spec here to make the parsing
@@ -271,14 +300,6 @@ export class RGPUDeclParser extends RGPUParser {
      * of it, but I will parse them anyway, and then mark those nodes as errors
      * if they are present.
      */
-
-    // handle global var declaration and override declaration
-    decl = this.attributes(decl, [
-      TokenKind.KEYWORD_VAR,
-      TokenKind.KEYWORD_LET,
-      TokenKind.KEYWORD_OVERRIDE,
-      TokenKind.KEYWORD_CONST,
-    ]);
 
     if (this.check(TokenKind.KEYWORD_VAR)) {
       const var_decl = this.var_decl();
@@ -401,16 +422,20 @@ export class RGPUDeclParser extends RGPUParser {
     return param;
   }
 
-  global_function_decl(): SyntaxNode {
-    let decl: SyntaxNode = {
-      kind: TokenKind.AST_FUNCTION_DECLARATION,
-      children: [],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
+  global_function_decl(decl?: SyntaxNode): SyntaxNode {
+    if (typeof decl === "undefined") {
+      decl = {
+        kind: TokenKind.AST_FUNCTION_DECLARATION,
+        children: [],
+        leading_trivia: [],
+        trailing_trivia: [],
+      };
 
-    // handle leading attributes on function decl
-    decl = this.attributes(decl, [TokenKind.KEYWORD_FN]);
+      // handle leading attributes on function decl
+      decl = this.attributes(decl, [TokenKind.KEYWORD_FN]);
+    } else {
+      decl.kind = TokenKind.AST_FUNCTION_DECLARATION;
+    }
 
     if (this.check(TokenKind.KEYWORD_FN)) {
       const { node: fn_node } = this.accept(TokenKind.KEYWORD_FN, true);
@@ -472,5 +497,120 @@ export class RGPUDeclParser extends RGPUParser {
 
       return this.absorb_trailing_trivia(decl);
     }
+  }
+
+  global_decl(): SyntaxNode {
+    let decl: SyntaxNode = {
+      kind: TokenKind.AST_GLOBAL_DECLARATION,
+      children: [],
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
+
+    decl = this.attributes(decl, [
+      TokenKind.SYM_SEMICOLON,
+      TokenKind.KEYWORD_VAR,
+      TokenKind.KEYWORD_CONST,
+      // TokenKind.KEYWORD_LET,
+      TokenKind.KEYWORD_OVERRIDE,
+      TokenKind.KEYWORD_FN,
+      TokenKind.KEYWORD_STRUCT,
+      TokenKind.KEYWORD_ALIAS,
+      TokenKind.KEYWORD_CONST_ASSERT,
+    ]);
+
+    if (this.check(TokenKind.SYM_SEMICOLON)) {
+      const { node } = this.accept(TokenKind.SYM_SEMICOLON, true);
+      decl.children.push(node);
+      return this.absorb_trailing_trivia(decl);
+    }
+
+    if (
+      this.check(TokenKind.KEYWORD_VAR) ||
+      this.check(TokenKind.KEYWORD_CONST) ||
+      this.check(TokenKind.KEYWORD_OVERRIDE)
+    ) {
+      decl = this.global_var_decl(decl);
+      const { node } = this.accept(TokenKind.SYM_SEMICOLON, true);
+      decl.children.push(node);
+      return this.absorb_trailing_trivia(decl);
+    }
+
+    if (this.check(TokenKind.KEYWORD_STRUCT)) {
+      decl = this.struct_decl(decl);
+      return this.absorb_trailing_trivia(decl);
+    }
+
+    if (this.check(TokenKind.KEYWORD_ALIAS)) {
+      decl = this.type_alias_decl(decl);
+      const { node } = this.accept(TokenKind.SYM_SEMICOLON, true);
+      decl.children.push(node);
+      return this.absorb_trailing_trivia(decl);
+    }
+
+    if (this.check(TokenKind.KEYWORD_FN)) {
+      decl = this.global_function_decl(decl);
+      return this.absorb_trailing_trivia(decl);
+    }
+
+    if (this.check(TokenKind.KEYWORD_CONST_ASSERT)) {
+      decl = this.const_assert(decl);
+      const { node } = this.accept(TokenKind.SYM_SEMICOLON, true);
+      decl.children.push(node);
+      return this.absorb_trailing_trivia(decl);
+    }
+
+    // error.
+    decl.kind = TokenKind.ERR_ERROR;
+    return this.absorb_trailing_trivia(decl);
+  }
+
+  translation_unit(): SyntaxNode {
+    // while there's still stuff to parse
+    const decls: SyntaxNode[] = [];
+
+    while (this.next_token()) {
+      const decl = this.global_decl();
+
+      if (decl.kind === TokenKind.ERR_ERROR) {
+        // advance until we find a valid token for a decl.
+        // NOTE(Nic): we should do something similar in the compound_statement parser
+        const tokens = this.advance_until(
+          new Set([
+            TokenKind.SYM_SEMICOLON,
+            TokenKind.KEYWORD_VAR,
+            TokenKind.KEYWORD_CONST,
+            TokenKind.KEYWORD_LET,
+            TokenKind.KEYWORD_OVERRIDE,
+            TokenKind.KEYWORD_FN,
+            TokenKind.KEYWORD_STRUCT,
+            TokenKind.KEYWORD_ALIAS,
+            TokenKind.KEYWORD_CONST_ASSERT,
+            TokenKind.SYM_AT,
+          ])
+        );
+
+        decl.children.push({
+          kind: TokenKind.ERR_ERROR,
+          children: tokens.map((t) => ({
+            kind: t.kind,
+            text: t.text,
+            leading_trivia: [],
+            trailing_trivia: [],
+          })),
+          leading_trivia: [],
+          trailing_trivia: [],
+        });
+      }
+
+      decls.push(decl);
+    }
+
+    return {
+      kind: TokenKind.AST_TRANSLATION_UNIT,
+      children: decls,
+      leading_trivia: [],
+      trailing_trivia: [],
+    };
   }
 }

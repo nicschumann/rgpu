@@ -693,7 +693,8 @@ export class RGPUStmtParser extends RGPUParser {
       return this.absorb_trailing_trivia(stmt);
     }
 
-    return null;
+    stmt.kind = TokenKind.ERR_ERROR;
+    return this.absorb_trailing_trivia(stmt);
   }
 
   compound_stmt(): SyntaxNode {
@@ -716,10 +717,13 @@ export class RGPUStmtParser extends RGPUParser {
 
     // parse 0 or more single statements
     if (matched) {
-      let stmt = this.single_stmt();
-      while (stmt) {
+      while (!this.check(TokenKind.SYM_RBRACE)) {
+        let stmt = this.single_stmt();
         compound_stmt.children.push(stmt);
-        stmt = this.single_stmt();
+
+        // NOTE(Nic): This tries to close a compound statement
+        // as soon as possible after an error... but we may not want this.
+        if (stmt.kind === TokenKind.ERR_ERROR) break;
       }
     }
 

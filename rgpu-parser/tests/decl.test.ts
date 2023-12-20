@@ -113,7 +113,7 @@ describe("RGPU Declaration Parser", () => {
     });
   });
 
-  it("should const assert statements", () => {
+  it("should parse const assert statements", () => {
     const lexer = new RPGUTokenizer();
     const expr_parser = new RGPUExprParser();
     const attr_parser = new RGPUAttrParser(expr_parser);
@@ -139,7 +139,7 @@ describe("RGPU Declaration Parser", () => {
     });
   });
 
-  it("should function declarations", () => {
+  it("should parse function declarations", () => {
     const lexer = new RPGUTokenizer();
     const expr_parser = new RGPUExprParser();
     const attr_parser = new RGPUAttrParser(expr_parser);
@@ -161,7 +161,37 @@ describe("RGPU Declaration Parser", () => {
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(cst, null, 4));
-      console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(parser.remaining());
+
+      expect(serialized).to.deep.equal(testcase);
+    });
+  });
+
+  it("should parse global declarations", () => {
+    const lexer = new RPGUTokenizer();
+    const parser = new RGPUDeclParser();
+    const testcases = [
+      "fn main(@builtin(vertex_position) x: vec2<i32>) { return 0; }",
+      "fn main(@builtin(vertex_position) v: vec2<i32>, y: i32 ) -> @builtin(vertex_position) vec4<f32> { return v.x + y; }",
+      "@grp struct Uniforms { light_dir: vec3<i32>, light_pos: vec3<i32> }",
+      "const_assert x <= 100;",
+      "alias v2i = vec2<i32>;",
+      "var<storage> a : i32;",
+    ];
+
+    testcases.forEach((testcase) => {
+      const tokens = lexer.tokenize_source(testcase);
+
+      // if you need to debug token stream...
+      // console.log(tokens);
+      parser.reset(tokens);
+      const cst = parser.global_decl();
+
+      const serialized = serialize_nodes(cst);
+
+      // console.log(JSON.stringify(cst, null, 4));
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
       // console.log(parser.remaining());
 
       expect(serialized).to.deep.equal(testcase);
