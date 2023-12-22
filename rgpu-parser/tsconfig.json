@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
+    "target": "ES5",
+    "module": "ESNext",
     "types": ["@webgpu/types", "mocha", "chai"],
     "lib": ["ESNext", "DOM"]
-  }
+  },
+  "exclude": ["node_modules", "test"]
 }

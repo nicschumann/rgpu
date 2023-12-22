@@ -1,0 +1,9 @@
+// tsconfig.test.json
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs", // For Node.js
+    "types": ["@types/node", "mocha", "chai"], // Include Node.js types
+    "lib": ["es5", "dom"] // Libraries for browser environment, adjust as needed
+  }
+}

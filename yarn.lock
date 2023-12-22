@@ -647,6 +647,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/node@npm:^20.10.5":
+  version: 20.10.5
+  resolution: "@types/node@npm:20.10.5"
+  dependencies:
+    undici-types: "npm:~5.26.4"
+  checksum: be30609aae0bfe492097815f166ccc07f465220cb604647fa4e5ec05a1d16c012a41b82b5f11ecfe2485cbb479d4d20384b95b809ca0bcff6d94d5bbafa645bb
+  languageName: node
+  linkType: hard
+
 "@types/prop-types@npm:*":
   version: 15.7.11
   resolution: "@types/prop-types@npm:15.7.11"
@@ -4651,6 +4660,7 @@ __metadata:
   dependencies:
     "@types/chai": "npm:^4.3.11"
     "@types/mocha": "npm:^10.0.6"
+    "@types/node": "npm:^20.10.5"
     chai: "npm:^4.3.10"
     mocha: "npm:^10.2.0"
     ts-node: "npm:^10.9.1"

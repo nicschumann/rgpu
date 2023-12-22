@@ -1,25 +1,34 @@
+import * as fs from "fs";
+import * as path from "path";
 import { expect } from "chai";
 import { RPGUTokenizer, serialize_tokens } from "../src/tokenizer";
-import {
-  RGPUExprParser,
-  serialize_nodes,
-  simplify_cst,
-} from "../src/expr-parser";
+import { serialize_nodes, simplify_cst } from "../src/expr-parser";
 import { RGPUDeclParser } from "../src/decl-parser";
 
 describe("RGPU Translation Unit Parser", () => {
-  it("should parse programs", () => {
+  let testcases: string[] = [];
+
+  before("RGPU Translation Unit Parser", function (done) {
+    const testcase_paths = path.join(__dirname, "wgsl");
+    const files = fs.readdirSync(testcase_paths, {
+      withFileTypes: true,
+      encoding: "utf-8",
+    });
+
+    files
+      .filter((entry) => entry.isFile() && entry.name.indexOf(".wgsl") !== -1)
+      .forEach((entry) => {
+        const file_path = path.join(entry.path, entry.name);
+        const source = fs.readFileSync(file_path, "utf-8");
+        testcases.push(source);
+      });
+
+    done();
+  });
+
+  it("should parse shader files", () => {
     const lexer = new RPGUTokenizer();
     const parser = new RGPUDeclParser();
-    const testcases = [
-      "fn main(@builtin(vertex_position) x: vec2<i32>) { return 0; }",
-      "fn main(@builtin(vertex_position) v: vec2<i32>, y: i32 ) -> @builtin(vertex_position) vec4<f32> { return v.x + y; }",
-      "@grp struct Uniforms { light_dir: vec3<i32>, light_pos: vec3<i32> }",
-      "const_assert x <= 100;",
-      "alias v2i = vec2<i32>;",
-      "var<storage> a : i32;",
-      "var<storage, read> a:i32; var<storage> b: vec2<i32>;     const_assert a == 0;",
-    ];
 
     testcases.forEach((testcase) => {
       const tokens = lexer.tokenize_source(testcase);
