@@ -17,6 +17,7 @@ describe("RGPU Translation Unit Parser", () => {
 
     files
       .filter((entry) => entry.isFile() && entry.name.indexOf(".wgsl") !== -1)
+      .sort()
       .forEach((entry) => {
         const file_path = path.join(entry.path, entry.name);
         const source = fs.readFileSync(file_path, "utf-8");
@@ -30,7 +31,7 @@ describe("RGPU Translation Unit Parser", () => {
     const lexer = new RPGUTokenizer();
     const parser = new RGPUDeclParser();
 
-    testcases.forEach((testcase) => {
+    testcases.forEach((testcase, i) => {
       const tokens = lexer.tokenize_source(testcase);
 
       // if you need to debug token stream...
@@ -41,7 +42,10 @@ describe("RGPU Translation Unit Parser", () => {
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(cst, null, 4));
-      console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      if (i === testcases.length - 1) {
+        console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      }
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
       // console.log(parser.remaining());
 
       expect(serialized).to.deep.equal(testcase);
