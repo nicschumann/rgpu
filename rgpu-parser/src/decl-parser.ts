@@ -89,25 +89,12 @@ export class RGPUDeclParser extends RGPUParser {
     );
 
     if (colon_matched) {
-      decl = {
-        kind: TokenKind.AST_TYPED_IDENTIFIER,
-        children: [decl, colon_node],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      decl = this.node(TokenKind.AST_TYPED_IDENTIFIER, [decl, colon_node]);
 
       const template_ident = this.template_ident();
 
-      if (template_ident) {
-        decl.children.push(template_ident);
-      } else {
-        decl.children.push({
-          kind: TokenKind.ERR_ERROR,
-          text: "",
-          leading_trivia: [],
-          trailing_trivia: [],
-        });
-      }
+      if (template_ident) decl.children.push(template_ident);
+      else decl.children.push(this.leaf(TokenKind.ERR_ERROR));
     }
 
     return this.absorb_trailing_trivia(decl);
@@ -123,12 +110,7 @@ export class RGPUDeclParser extends RGPUParser {
     if (!ca_matched) return null;
 
     if (typeof decl === "undefined") {
-      decl = {
-        kind: TokenKind.AST_CONST_ASSERT,
-        children: [ca_node],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      decl = this.node(TokenKind.AST_CONST_ASSERT, [ca_node]);
     } else {
       decl.kind = TokenKind.AST_CONST_ASSERT;
       decl.children.push(ca_node);
@@ -150,14 +132,9 @@ export class RGPUDeclParser extends RGPUParser {
     if (!struct_matched) return null;
 
     if (typeof decl === "undefined") {
-      decl = {
-        kind: TokenKind.AST_STRUCT_DECLRATAION,
-        children: [struct_node],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      decl = this.node(TokenKind.AST_STRUCT_DECLARATION, [struct_node]);
     } else {
-      decl.kind = TokenKind.AST_STRUCT_DECLRATAION;
+      decl.kind = TokenKind.AST_STRUCT_DECLARATION;
       decl.children.push(struct_node);
     }
 
@@ -177,12 +154,7 @@ export class RGPUDeclParser extends RGPUParser {
         this.check(TokenKind.SYM_COMMA)
       ) {
         // try and parse a member identifier...
-        let struct_member: SyntaxNode = {
-          kind: TokenKind.AST_STRUCT_MEMBER,
-          children: [],
-          leading_trivia: [],
-          trailing_trivia: [],
-        };
+        let struct_member: SyntaxNode = this.node(TokenKind.AST_STRUCT_MEMBER);
 
         struct_member = this.attributes(struct_member, [
           TokenKind.SYM_IDENTIFIER,
@@ -218,12 +190,7 @@ export class RGPUDeclParser extends RGPUParser {
     if (!alias_matched) return null;
 
     if (typeof decl === "undefined") {
-      decl = {
-        kind: TokenKind.AST_ALIAS_DECLARATION,
-        children: [alias_node],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      decl = this.node(TokenKind.AST_ALIAS_DECLARATION, [alias_node]);
     } else {
       decl.kind = TokenKind.AST_ALIAS_DECLARATION;
       decl.children.push(alias_node);
@@ -237,13 +204,7 @@ export class RGPUDeclParser extends RGPUParser {
 
     const type = this.template_ident();
     if (type) decl.children.push(type);
-    else
-      decl.children.push({
-        kind: TokenKind.ERR_ERROR,
-        text: "",
-        leading_trivia: [],
-        trailing_trivia: [],
-      });
+    else decl.children.push(this.leaf(TokenKind.ERR_ERROR));
 
     return this.absorb_trailing_trivia(decl);
   }
@@ -254,12 +215,7 @@ export class RGPUDeclParser extends RGPUParser {
 
     if (!matched) return null;
 
-    const decl: SyntaxNode = {
-      kind: TokenKind.AST_VAR_DECLARATION,
-      children: [node],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
+    const decl: SyntaxNode = this.node(TokenKind.AST_VAR_DECLARATION, [node]);
 
     let var_template = this.template();
     if (var_template) decl.children.push(var_template);
@@ -275,12 +231,7 @@ export class RGPUDeclParser extends RGPUParser {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-global_value_decl)
     if (typeof decl === "undefined") {
       // if we are not passed a decl, we assume it needs attributes parsed.
-      decl = {
-        kind: TokenKind.AST_GLOBAL_VAR_DECLARATION,
-        children: [],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      decl = this.node(TokenKind.AST_GLOBAL_VAR_DECLARATION);
 
       // handle global var declaration and override declaration
       decl = this.attributes(decl, [
@@ -310,18 +261,8 @@ export class RGPUDeclParser extends RGPUParser {
         // two errors, one for the missing var,
         // one for the missing ident node
         decl.children.push(
-          {
-            kind: TokenKind.ERR_ERROR,
-            text: "",
-            leading_trivia: [],
-            trailing_trivia: [],
-          },
-          {
-            kind: TokenKind.ERR_ERROR,
-            text: "",
-            leading_trivia: [],
-            trailing_trivia: [],
-          }
+          this.leaf(TokenKind.ERR_ERROR),
+          this.leaf(TokenKind.ERR_ERROR)
         );
       }
 
@@ -337,16 +278,8 @@ export class RGPUDeclParser extends RGPUParser {
       decl.children.push(node);
 
       const ident = this.optionally_typed_ident();
-      if (ident) {
-        decl.children.push(ident);
-      } else {
-        decl.children.push({
-          kind: TokenKind.ERR_ERROR,
-          text: "",
-          leading_trivia: [],
-          trailing_trivia: [],
-        });
-      }
+      if (ident) decl.children.push(ident);
+      else decl.children.push(this.leaf(TokenKind.ERR_ERROR));
 
       const { matched, node: equal_node } = this.accept(
         TokenKind.SYM_EQUAL,
@@ -379,16 +312,8 @@ export class RGPUDeclParser extends RGPUParser {
       }
 
       const ident = this.optionally_typed_ident();
-      if (ident) {
-        decl.children.push(ident);
-      } else {
-        decl.children.push({
-          kind: TokenKind.ERR_ERROR,
-          text: "",
-          leading_trivia: [],
-          trailing_trivia: [],
-        });
-      }
+      if (ident) decl.children.push(ident);
+      else decl.children.push(this.leaf(TokenKind.ERR_ERROR));
 
       const { node: equal_node } = this.accept(TokenKind.SYM_EQUAL, true);
       decl.children.push(equal_node);
@@ -397,12 +322,7 @@ export class RGPUDeclParser extends RGPUParser {
       decl.children.push(expr);
     } else {
       // error case...
-      decl.children.push({
-        kind: TokenKind.ERR_ERROR,
-        text: "",
-        leading_trivia: [],
-        trailing_trivia: [],
-      });
+      decl.children.push(this.leaf(TokenKind.ERR_ERROR));
     }
 
     return this.absorb_trailing_trivia(decl);
@@ -424,12 +344,7 @@ export class RGPUDeclParser extends RGPUParser {
 
   global_function_decl(decl?: SyntaxNode): SyntaxNode {
     if (typeof decl === "undefined") {
-      decl = {
-        kind: TokenKind.AST_FUNCTION_DECLARATION,
-        children: [],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      decl = this.node(TokenKind.AST_FUNCTION_DECLARATION);
 
       // handle leading attributes on function decl
       decl = this.attributes(decl, [TokenKind.KEYWORD_FN]);
@@ -447,12 +362,7 @@ export class RGPUDeclParser extends RGPUParser {
       const { node: lparen_node } = this.accept(TokenKind.SYM_LPAREN, true);
       decl.children.push(lparen_node);
 
-      const params: SyntaxNode = {
-        kind: TokenKind.AST_FUNCTION_PARAMETERS,
-        children: [],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      const params: SyntaxNode = this.node(TokenKind.AST_FUNCTION_PARAMETERS);
 
       let matched = true;
       while (matched && !this.check(TokenKind.SYM_RPAREN)) {
@@ -481,12 +391,9 @@ export class RGPUDeclParser extends RGPUParser {
         );
         decl.children.push(arrow_node);
 
-        let ret_type: SyntaxNode = {
-          kind: TokenKind.AST_FUNCTION_RETURN_TYPE,
-          children: [],
-          leading_trivia: [],
-          trailing_trivia: [],
-        };
+        let ret_type: SyntaxNode = this.node(
+          TokenKind.AST_FUNCTION_RETURN_TYPE
+        );
 
         ret_type = this.attributes(ret_type, [TokenKind.SYM_IDENTIFIER]);
         ret_type.children.push(this.template_ident());

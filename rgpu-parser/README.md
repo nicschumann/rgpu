@@ -1,6 +1,13 @@
 # RGPU Parser
 
-`rgpu-parser` is a permissive parser for [WGSL](https://www.w3.org/TR/WGSL/), the shading language for webgpu. It is designed to be integrated with linters and semantic analysis tools, rather than compilers. It emphasizes parsing permissively, in the sense that it partially parses syntactically incorrect programs, so that linting rules can be applied to valid subtrees of the parse. This is because it is meant to be integrated into editors, where most input programs are "in progress", rather than compilers, where most input programs are "done".
+`rgpu-parser` is a permissive/tolerant parser for [WGSL](https://www.w3.org/TR/WGSL/), the shading language for webgpu. It is designed to be integrated with linters and semantic analysis tools, rather than compilers. It emphasizes parsing permissively, in the sense that it partially parses syntactically incorrect programs, so that linting rules can be applied to valid subtrees of the parse. This is because it is meant to be integrated into editors, where most input programs are "in progress", rather than compilers, where most input programs are "done".
+
+## References
+
+Two references are especially helpful as references for this implementation:
+
+- [Concrete Syntax Trees](https://github.com/rust-lang/rust-analyzer/blob/master/docs/dev/syntax.md) as used in Rust Analyzer. Discusses techniques for quickly parsing rust source in a way that's suitable for language extensions and editor plugins.
+- [Tolerant Parsing](https://github.com/microsoft/tolerant-php-parser/blob/main/docs/HowItWorks.md) for php, a Microsoft reimplementation for php in a vscode language server.
 
 ## Statement Types
 

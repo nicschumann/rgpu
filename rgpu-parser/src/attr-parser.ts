@@ -3,28 +3,28 @@ import { RGPUParser } from "./parser";
 import { TokenKind } from "./tokens";
 import { SyntaxNode } from "./types";
 
-const zero_arg_attribute_names: Set<string> = new Set([
-  "const",
-  "invariant",
-  "must_use",
-  "vertex",
-  "fragment",
-  "compute",
-]);
+// const zero_arg_attribute_names: Set<string> = new Set([
+//   "const",
+//   "invariant",
+//   "must_use",
+//   "vertex",
+//   "fragment",
+//   "compute",
+// ]);
 
-const single_arg_attribute_names: Set<string> = new Set([
-  "align",
-  "binding",
-  "builtin",
-  "group",
-  "id",
-  "location",
-  "size",
-]);
+// const single_arg_attribute_names: Set<string> = new Set([
+//   "align",
+//   "binding",
+//   "builtin",
+//   "group",
+//   "id",
+//   "location",
+//   "size",
+// ]);
 
-const double_arg_attribute_names: Set<string> = new Set(["interpolate"]);
+// const double_arg_attribute_names: Set<string> = new Set(["interpolate"]);
 
-const triple_arg_attribute_names: Set<string> = new Set(["workgroup_size"]);
+// const triple_arg_attribute_names: Set<string> = new Set(["workgroup_size"]);
 
 export class RGPUAttrParser extends RGPUParser {
   private expr_parser: RGPUExprParser;
@@ -97,13 +97,7 @@ export class RGPUAttrParser extends RGPUParser {
          * when the terminal set contains SYM_IDENTIFIER, or another symbol, that
          * may be part of an attribute expression...
          */
-
-        attribute.children.push({
-          kind: TokenKind.ERR_ERROR,
-          text: "",
-          leading_trivia: consumed,
-          trailing_trivia: [],
-        });
+        attribute.children.push(this.leaf(TokenKind.ERR_ERROR, "", consumed));
       }
       // parse 0 or more attributes
       decl.children.push(attribute);
@@ -121,15 +115,7 @@ export class RGPUAttrParser extends RGPUParser {
 
     let attr: SyntaxNode = {
       kind: TokenKind.AST_ATTRIBUTE,
-      children: [
-        at_node,
-        {
-          kind: current.kind,
-          text: current.text,
-          leading_trivia: trivia,
-          trailing_trivia: [],
-        },
-      ],
+      children: [at_node, this.leaf(current.kind, current.text, trivia)],
       leading_trivia: [],
       trailing_trivia: [],
     };

@@ -172,11 +172,6 @@ export class RGPUParser {
     }
   }
 
-  /**
-   *
-   * @param node
-   * @returns
-   */
   protected absorb_trailing_trivia(node: SyntaxNode): SyntaxNode {
     const { trivia: trailing_trivia } = this.skip_trivia(
       this.current_position + 1,
@@ -185,5 +180,33 @@ export class RGPUParser {
     node.trailing_trivia.push(...trailing_trivia);
 
     return node;
+  }
+
+  protected node(
+    kind: TokenKind,
+    children: SyntaxNode[] = [],
+    leading_trivia?: Token[],
+    trailing_trivia?: Token[]
+  ): SyntaxNode {
+    return {
+      kind,
+      children: children,
+      leading_trivia: leading_trivia || [],
+      trailing_trivia: trailing_trivia || [],
+    };
+  }
+
+  protected leaf(
+    kind: TokenKind,
+    text: string = "",
+    leading_trivia?: Token[],
+    trailing_trivia?: Token[]
+  ): SyntaxNode {
+    return {
+      kind,
+      text: text,
+      leading_trivia: leading_trivia || [],
+      trailing_trivia: trailing_trivia || [],
+    };
   }
 }
