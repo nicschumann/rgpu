@@ -1,4 +1,11 @@
-import { RGPUExprParser } from "./expr-parser";
-import { RPGUTokenizer } from "./tokenizer";
+import { RGPUDeclParser } from "./decl-parser";
+import { RPGUTokenizer, serialize_tokens } from "./tokenizer";
+import { serialize_nodes, simplify_cst } from "./expr-parser";
 
-export { RGPUExprParser, RPGUTokenizer };
+export {
+  RGPUDeclParser,
+  RPGUTokenizer,
+  serialize_nodes,
+  serialize_tokens,
+  simplify_cst,
+};

@@ -9,14 +9,18 @@
   "private": true,
   "packageManager": "yarn@4.0.2",
   "scripts": {
+    "compile": "tsc -b",
     "test": "TS_NODE_PROJECT=\"tests/tsconfig.json\" mocha"
   },
   "devDependencies": {
-    "@types/node": "^20.10.5",
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",
+    "@types/node": "^20.10.5",
     "chai": "^4.3.10",
     "mocha": "^10.2.0",
     "ts-node": "^10.9.1"
+  },
+  "dependencies": {
+    "typescript": "^5.3.3"
   }
 }

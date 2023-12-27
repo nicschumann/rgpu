@@ -1,7 +1,7 @@
 import { RGPUExprParser } from "./expr-parser";
 import { RGPUParser } from "./parser";
 import { TokenKind } from "./tokens";
-import { SyntaxNode } from "./types";
+import { Syntax, SyntaxNode } from "./types";
 
 // const zero_arg_attribute_names: Set<string> = new Set([
 //   "const",
@@ -34,7 +34,7 @@ export class RGPUAttrParser extends RGPUParser {
     this.expr_parser = expr_parser;
   }
 
-  private expr(): SyntaxNode {
+  private expr(): Syntax {
     const tokens = this.tokens.slice(this.current_position + 1);
     this.expr_parser.reset(tokens);
     const expr = this.expr_parser.expr();
@@ -83,7 +83,7 @@ export class RGPUAttrParser extends RGPUParser {
   }
 
   attributes(decl: SyntaxNode, terminals: TokenKind[] = []): SyntaxNode {
-    let attribute: SyntaxNode = null;
+    let attribute: SyntaxNode | null = null;
     const terminal_set = new Set([TokenKind.SYM_AT, ...terminals]);
 
     while ((attribute = this.attribute()) !== null) {
@@ -106,7 +106,7 @@ export class RGPUAttrParser extends RGPUParser {
     return decl;
   }
 
-  attribute(): SyntaxNode {
+  attribute(): SyntaxNode | null {
     let { matched, node: at_node } = this.accept(TokenKind.SYM_AT, true);
 
     if (!matched) return null;

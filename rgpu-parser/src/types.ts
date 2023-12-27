@@ -4,8 +4,6 @@ import {
   UnaryOperatorTokenKind,
 } from "./tokens";
 
-export enum SyntaxKind {}
-
 export type Token = {
   kind: TokenKind;
   text: string;
@@ -17,23 +15,31 @@ export type TemplateList = {
   end_position: number; // position of the '>' token point that ends the template list
 };
 
-export const isNode = (value: any): value is Node => {
-  return typeof value.children !== "undefined";
-};
-
-export const isToken = (value: any): value is Node => {
-  return typeof value.text === "string";
-};
+export type Syntax = SyntaxNode | SyntaxLeaf;
 
 export type SyntaxNode = {
   kind: TokenKind;
-  text?: string;
-  children?: SyntaxNode[];
+  children: Syntax[];
   leading_trivia: Token[];
   trailing_trivia: Token[];
 };
 
-export type SimplifiedSyntaxNode =
+export type SyntaxLeaf = {
+  kind: TokenKind;
+  text: string;
+  leading_trivia: Token[];
+  trailing_trivia: Token[];
+};
+
+export function isSyntaxNode(data: Syntax): data is SyntaxNode {
+  return typeof (data as SyntaxNode).children !== "undefined";
+}
+
+export function isSyntaxLeaf(data: Syntax): data is SyntaxLeaf {
+  return typeof (data as SyntaxLeaf).text !== "undefined";
+}
+
+export type SimplifiedSyntax =
   | {
       text?: string;
       error?: boolean;
@@ -41,7 +47,7 @@ export type SimplifiedSyntaxNode =
   | {
       pre: string;
       post: string;
-      children: SimplifiedSyntaxNode[];
+      children: SimplifiedSyntax[];
       error?: boolean;
     };
 
@@ -58,7 +64,7 @@ export type TriviaData = {
 
 export type AcceptData = {
   matched: boolean;
-  node: SyntaxNode;
+  node: Syntax;
 };
 
 export type RemainingData = {

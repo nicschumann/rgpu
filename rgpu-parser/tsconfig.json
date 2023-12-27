@@ -3,7 +3,10 @@
     "target": "ES5",
     "module": "ESNext",
     "types": ["@webgpu/types", "mocha", "chai"],
-    "lib": ["ESNext", "DOM"]
+    "lib": ["ESNext", "DOM"],
+    "outDir": "dist",
+    "strict": false
   },
+  "include": ["src/index.ts"],
   "exclude": ["node_modules", "test"]
 }

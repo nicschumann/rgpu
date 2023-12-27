@@ -3,6 +3,7 @@ import { RGPUExprParser } from "./expr-parser";
 import { RGPUParser } from "./parser";
 import { TokenKind } from "./tokens";
 import {
+  Syntax,
   SyntaxNode,
   assignment_op_types,
   assignment_or_expr_tokens,
@@ -25,7 +26,7 @@ export class RGPUStmtParser extends RGPUParser {
    * routine...
    */
 
-  private expr(): SyntaxNode {
+  private expr(): Syntax {
     const tokens = this.tokens.slice(this.current_position + 1);
     this.expr_parser.reset(tokens);
     const expr = this.expr_parser.expr();
@@ -35,7 +36,7 @@ export class RGPUStmtParser extends RGPUParser {
     return expr;
   }
 
-  private template_ident(): SyntaxNode {
+  private template_ident(): Syntax {
     const tokens = this.tokens.slice(this.current_position + 1);
     this.expr_parser.reset(tokens);
     const expr = this.expr_parser.template_ident();
@@ -45,7 +46,7 @@ export class RGPUStmtParser extends RGPUParser {
     return expr;
   }
 
-  private template(): SyntaxNode {
+  private template(): Syntax {
     const tokens = this.tokens.slice(this.current_position + 1);
     this.expr_parser.reset(tokens);
     const expr = this.expr_parser.template();
@@ -68,7 +69,7 @@ export class RGPUStmtParser extends RGPUParser {
     return expr;
   }
 
-  optionally_typed_ident(): SyntaxNode {
+  optionally_typed_ident(): Syntax {
     // [here](https://www.w3.org/TR/WGSL/#syntax-optionally_typed_ident)
 
     let { matched, node: decl } = this.accept(TokenKind.SYM_IDENTIFIER, true);
@@ -82,62 +83,34 @@ export class RGPUStmtParser extends RGPUParser {
     );
 
     if (colon_matched) {
-      decl = {
-        kind: TokenKind.AST_TYPED_IDENTIFIER,
-        children: [decl, colon_node],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      decl = this.node(TokenKind.AST_TYPED_IDENTIFIER, [decl, colon_node]);
 
       const template_ident = this.template_ident();
 
-      if (template_ident) {
-        decl.children.push(template_ident);
-      } else {
-        decl.children.push({
-          kind: TokenKind.ERR_ERROR,
-          text: "",
-          leading_trivia: [],
-          trailing_trivia: [],
-        });
-      }
+      if (template_ident) decl.children.push(template_ident);
+      else decl.children.push(this.leaf(TokenKind.ERR_ERROR));
     }
 
     return this.absorb_trailing_trivia(decl);
   }
 
-  var_stmt(): SyntaxNode {
+  var_stmt(): Syntax {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-variable_or_value_statement)
     if (
       this.check(TokenKind.KEYWORD_CONST) ||
       this.check(TokenKind.KEYWORD_LET)
     ) {
       const { current, trivia } = this.advance();
-      const decl: SyntaxNode = {
-        kind: current.kind,
-        children: [
-          {
-            kind: current.kind,
-            text: current.text,
-            leading_trivia: trivia,
-            trailing_trivia: [],
-          },
-        ],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      const decl = this.node(
+        current.kind === TokenKind.KEYWORD_CONST
+          ? TokenKind.AST_CONST_DECLARATION_STATEMENT
+          : TokenKind.AST_LET_DECLARATION_STATEMENT,
+        [this.leaf(current.kind, current.text, trivia)]
+      );
 
       const ident = this.optionally_typed_ident();
-      if (ident) {
-        decl.children.push(ident);
-      } else {
-        decl.children.push({
-          kind: TokenKind.ERR_ERROR,
-          text: "",
-          leading_trivia: [],
-          trailing_trivia: [],
-        });
-      }
+      if (ident) decl.children.push(ident);
+      else decl.children.push(this.leaf(TokenKind.ERR_ERROR));
 
       const { matched, node } = this.accept(TokenKind.SYM_EQUAL, true);
       if (matched) decl.children.push(node, this.expr());
@@ -146,12 +119,9 @@ export class RGPUStmtParser extends RGPUParser {
     } else if (this.check(TokenKind.KEYWORD_VAR)) {
       const { node } = this.accept(TokenKind.KEYWORD_VAR, true);
 
-      const decl: SyntaxNode = {
-        kind: TokenKind.AST_VAR_DECLARATION,
-        children: [node],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      const decl: Syntax = this.node(TokenKind.AST_VAR_DECLARATION_STATEMENT, [
+        node,
+      ]);
 
       let var_template = this.template();
       if (var_template) decl.children.push(var_template);
@@ -171,7 +141,7 @@ export class RGPUStmtParser extends RGPUParser {
     return null; // rule didn't match
   }
 
-  const_assert(): SyntaxNode {
+  const_assert(): Syntax {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-const_assert_statement)
 
     const { matched: ca_matched, node: ca_node } = this.accept(
@@ -180,7 +150,7 @@ export class RGPUStmtParser extends RGPUParser {
     );
     if (!ca_matched) return null;
 
-    const decl: SyntaxNode = {
+    const decl: Syntax = {
       kind: TokenKind.AST_CONST_ASSERT,
       children: [ca_node],
       leading_trivia: [],
@@ -252,7 +222,7 @@ export class RGPUStmtParser extends RGPUParser {
     return null; // rule didn't match
   }
 
-  single_stmt(): SyntaxNode {
+  single_stmt(): Syntax {
     let stmt: SyntaxNode = {
       kind: TokenKind.AST_STATEMENT,
       children: [],
@@ -320,7 +290,7 @@ export class RGPUStmtParser extends RGPUParser {
       stmt.kind = TokenKind.AST_CONDITIONAL_STATEMENT;
 
       const { node: if_node } = this.accept(TokenKind.KEYWORD_IF, true);
-      const if_branch: SyntaxNode = {
+      const if_branch: Syntax = {
         kind: TokenKind.AST_IF_BRANCH,
         children: [if_node, this.expr(), this.compound_stmt()],
         leading_trivia: [],
@@ -338,7 +308,7 @@ export class RGPUStmtParser extends RGPUParser {
 
         if (if_matched) {
           // handle an else if condition...
-          const else_if_branch: SyntaxNode = {
+          const else_if_branch: Syntax = {
             kind: TokenKind.AST_ELSE_IF_BRANCH,
             children: [else_node, if_node, this.expr(), this.compound_stmt()],
             leading_trivia: [],
@@ -347,7 +317,7 @@ export class RGPUStmtParser extends RGPUParser {
           stmt.children.push(else_if_branch);
         } else {
           // handle a pure else condition
-          const else_branch: SyntaxNode = {
+          const else_branch: Syntax = {
             kind: TokenKind.AST_ELSE_BRANCH,
             children: [else_node, this.compound_stmt()],
             leading_trivia: [],
@@ -381,14 +351,14 @@ export class RGPUStmtParser extends RGPUParser {
         if (this.check(TokenKind.KEYWORD_CASE)) {
           const { node: case_node } = this.accept(TokenKind.KEYWORD_CASE, true);
 
-          let case_statement: SyntaxNode = {
+          let case_statement: Syntax = {
             kind: TokenKind.AST_SWITCH_DEFAULT,
             children: [case_node],
             leading_trivia: [],
             trailing_trivia: [],
           };
 
-          let case_condition: SyntaxNode = {
+          let case_condition: Syntax = {
             kind: TokenKind.AST_SWITCH_CASE_CONDITION,
             children: [],
             leading_trivia: [],
@@ -443,7 +413,7 @@ export class RGPUStmtParser extends RGPUParser {
             true
           );
 
-          let default_stmt: SyntaxNode = {
+          let default_stmt: Syntax = {
             kind: TokenKind.AST_SWITCH_DEFAULT,
             children: [def_node],
             leading_trivia: [],
@@ -608,7 +578,7 @@ export class RGPUStmtParser extends RGPUParser {
       const { node: lparen_node } = this.accept(TokenKind.SYM_LPAREN, true);
       stmt.children.push(lparen_node);
 
-      let for_header: SyntaxNode = {
+      let for_header: Syntax = {
         kind: TokenKind.AST_FOR_HEADER,
         children: [],
         leading_trivia: [],
@@ -697,8 +667,8 @@ export class RGPUStmtParser extends RGPUParser {
     return this.absorb_trailing_trivia(stmt);
   }
 
-  compound_stmt(): SyntaxNode {
-    let compound_stmt: SyntaxNode = {
+  compound_stmt(): Syntax {
+    let compound_stmt: Syntax = {
       kind: TokenKind.AST_COMPOUND_STATEMENT,
       children: [],
       leading_trivia: [],

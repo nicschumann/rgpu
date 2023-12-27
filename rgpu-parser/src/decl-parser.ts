@@ -3,7 +3,7 @@ import { RGPUExprParser } from "./expr-parser";
 import { RGPUParser } from "./parser";
 import { RGPUStmtParser } from "./stmt-parser";
 import { TokenKind } from "./tokens";
-import { SyntaxNode } from "./types";
+import { Syntax, SyntaxNode } from "./types";
 
 export class RGPUDeclParser extends RGPUParser {
   private expr_parser: RGPUExprParser;
@@ -22,7 +22,7 @@ export class RGPUDeclParser extends RGPUParser {
       stmt_parser || new RGPUStmtParser(this.expr_parser, this.attr_parser);
   }
 
-  private expr(): SyntaxNode {
+  private expr(): Syntax {
     const tokens = this.tokens.slice(this.current_position + 1);
     this.expr_parser.reset(tokens);
     const expr = this.expr_parser.expr();
@@ -32,7 +32,7 @@ export class RGPUDeclParser extends RGPUParser {
     return expr;
   }
 
-  private template_ident(): SyntaxNode {
+  private template_ident(): Syntax {
     const tokens = this.tokens.slice(this.current_position + 1);
     this.expr_parser.reset(tokens);
     const expr = this.expr_parser.template_ident();
@@ -42,7 +42,7 @@ export class RGPUDeclParser extends RGPUParser {
     return expr;
   }
 
-  private template(): SyntaxNode {
+  private template(): Syntax {
     const tokens = this.tokens.slice(this.current_position + 1);
     this.expr_parser.reset(tokens);
     const expr = this.expr_parser.template();
@@ -65,7 +65,7 @@ export class RGPUDeclParser extends RGPUParser {
     return expr;
   }
 
-  private compound_stmt(): SyntaxNode {
+  private compound_stmt(): Syntax {
     const tokens = this.tokens.slice(this.current_position + 1);
     this.stmt_parser.reset(tokens);
     const expr = this.stmt_parser.compound_stmt();
@@ -75,7 +75,7 @@ export class RGPUDeclParser extends RGPUParser {
     return expr;
   }
 
-  optionally_typed_ident(): SyntaxNode {
+  optionally_typed_ident(): Syntax {
     // [here](https://www.w3.org/TR/WGSL/#syntax-optionally_typed_ident)
 
     let { matched, node: decl } = this.accept(TokenKind.SYM_IDENTIFIER, true);
@@ -100,7 +100,7 @@ export class RGPUDeclParser extends RGPUParser {
     return this.absorb_trailing_trivia(decl);
   }
 
-  const_assert(decl?: SyntaxNode): SyntaxNode {
+  const_assert(decl?: SyntaxNode): SyntaxNode | null {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-const_assert_statement)
 
     const { matched: ca_matched, node: ca_node } = this.accept(
@@ -122,7 +122,7 @@ export class RGPUDeclParser extends RGPUParser {
     return this.absorb_trailing_trivia(decl);
   }
 
-  struct_decl(decl?: SyntaxNode): SyntaxNode {
+  struct_decl(decl?: SyntaxNode): SyntaxNode | null {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-struct_decl)
 
     const { matched: struct_matched, node: struct_node } = this.accept(
@@ -154,7 +154,7 @@ export class RGPUDeclParser extends RGPUParser {
         this.check(TokenKind.SYM_COMMA)
       ) {
         // try and parse a member identifier...
-        let struct_member: SyntaxNode = this.node(TokenKind.AST_STRUCT_MEMBER);
+        let struct_member: Syntax = this.node(TokenKind.AST_STRUCT_MEMBER);
 
         struct_member = this.attributes(struct_member, [
           TokenKind.SYM_IDENTIFIER,
@@ -180,7 +180,7 @@ export class RGPUDeclParser extends RGPUParser {
     return this.absorb_trailing_trivia(decl);
   }
 
-  type_alias_decl(decl?: SyntaxNode): SyntaxNode {
+  type_alias_decl(decl?: SyntaxNode): SyntaxNode | null {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-type_alias_decl)
 
     const { matched: alias_matched, node: alias_node } = this.accept(
@@ -209,13 +209,13 @@ export class RGPUDeclParser extends RGPUParser {
     return this.absorb_trailing_trivia(decl);
   }
 
-  var_decl(): SyntaxNode {
+  var_decl(): SyntaxNode | null {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-variable_decl)
     let { matched, node } = this.accept(TokenKind.KEYWORD_VAR, true);
 
     if (!matched) return null;
 
-    const decl: SyntaxNode = this.node(TokenKind.AST_VAR_DECLARATION, [node]);
+    const decl: Syntax = this.node(TokenKind.AST_VAR_DECLARATION, [node]);
 
     let var_template = this.template();
     if (var_template) decl.children.push(var_template);
@@ -328,8 +328,8 @@ export class RGPUDeclParser extends RGPUParser {
     return this.absorb_trailing_trivia(decl);
   }
 
-  private param(): SyntaxNode {
-    let param: SyntaxNode = {
+  private param(): Syntax {
+    let param: Syntax = {
       kind: TokenKind.AST_FUNCTION_PARAMETER,
       children: [],
       leading_trivia: [],
@@ -342,7 +342,7 @@ export class RGPUDeclParser extends RGPUParser {
     return param;
   }
 
-  global_function_decl(decl?: SyntaxNode): SyntaxNode {
+  global_function_decl(decl?: SyntaxNode): SyntaxNode | null {
     if (typeof decl === "undefined") {
       decl = this.node(TokenKind.AST_FUNCTION_DECLARATION);
 
@@ -362,7 +362,7 @@ export class RGPUDeclParser extends RGPUParser {
       const { node: lparen_node } = this.accept(TokenKind.SYM_LPAREN, true);
       decl.children.push(lparen_node);
 
-      const params: SyntaxNode = this.node(TokenKind.AST_FUNCTION_PARAMETERS);
+      const params: Syntax = this.node(TokenKind.AST_FUNCTION_PARAMETERS);
 
       let matched = true;
       while (matched && !this.check(TokenKind.SYM_RPAREN)) {
@@ -391,9 +391,7 @@ export class RGPUDeclParser extends RGPUParser {
         );
         decl.children.push(arrow_node);
 
-        let ret_type: SyntaxNode = this.node(
-          TokenKind.AST_FUNCTION_RETURN_TYPE
-        );
+        let ret_type: Syntax = this.node(TokenKind.AST_FUNCTION_RETURN_TYPE);
 
         ret_type = this.attributes(ret_type, [TokenKind.SYM_IDENTIFIER]);
         ret_type.children.push(this.template_ident());
@@ -404,6 +402,12 @@ export class RGPUDeclParser extends RGPUParser {
 
       return this.absorb_trailing_trivia(decl);
     }
+
+    /**
+     * NOTE(Nic): This may be incorrect... if we have already parsed attributes, and
+     * we're in this function and didn't hit a function keyword, we've messed up the token stream...
+     */
+    return null;
   }
 
   global_decl(): SyntaxNode {
@@ -444,24 +448,24 @@ export class RGPUDeclParser extends RGPUParser {
     }
 
     if (this.check(TokenKind.KEYWORD_STRUCT)) {
-      decl = this.struct_decl(decl);
+      decl = <SyntaxNode>this.struct_decl(decl);
       return this.absorb_trailing_trivia(decl);
     }
 
     if (this.check(TokenKind.KEYWORD_ALIAS)) {
-      decl = this.type_alias_decl(decl);
+      decl = <SyntaxNode>this.type_alias_decl(decl);
       const { node } = this.accept(TokenKind.SYM_SEMICOLON, true);
       decl.children.push(node);
       return this.absorb_trailing_trivia(decl);
     }
 
     if (this.check(TokenKind.KEYWORD_FN)) {
-      decl = this.global_function_decl(decl);
+      decl = <SyntaxNode>this.global_function_decl(decl);
       return this.absorb_trailing_trivia(decl);
     }
 
     if (this.check(TokenKind.KEYWORD_CONST_ASSERT)) {
-      decl = this.const_assert(decl);
+      decl = <SyntaxNode>this.const_assert(decl);
       const { node } = this.accept(TokenKind.SYM_SEMICOLON, true);
       decl.children.push(node);
       return this.absorb_trailing_trivia(decl);
@@ -472,9 +476,9 @@ export class RGPUDeclParser extends RGPUParser {
     return this.absorb_trailing_trivia(decl);
   }
 
-  translation_unit(): SyntaxNode {
+  translation_unit(): Syntax {
     // while there's still stuff to parse
-    const decls: SyntaxNode[] = [];
+    const decls: Syntax[] = [];
 
     while (this.next_token()) {
       const decl = this.global_decl();

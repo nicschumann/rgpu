@@ -3,6 +3,8 @@ import {
   AcceptData,
   AdvanceData,
   RemainingData,
+  Syntax,
+  SyntaxLeaf,
   SyntaxNode,
   Token,
   TriviaData,
@@ -50,7 +52,7 @@ export class RGPUParser {
 
   protected check(kind: TokenKind): boolean {
     const next = this.next_token();
-    return next && next.kind === kind;
+    return next !== null && next.kind === kind;
   }
 
   protected accept(
@@ -172,7 +174,9 @@ export class RGPUParser {
     }
   }
 
-  protected absorb_trailing_trivia(node: SyntaxNode): SyntaxNode {
+  protected absorb_trailing_trivia<T extends SyntaxNode | SyntaxLeaf>(
+    node: T
+  ): T {
     const { trivia: trailing_trivia } = this.skip_trivia(
       this.current_position + 1,
       true
@@ -184,7 +188,7 @@ export class RGPUParser {
 
   protected node(
     kind: TokenKind,
-    children: SyntaxNode[] = [],
+    children: Syntax[] = [],
     leading_trivia?: Token[],
     trailing_trivia?: Token[]
   ): SyntaxNode {
@@ -201,7 +205,7 @@ export class RGPUParser {
     text: string = "",
     leading_trivia?: Token[],
     trailing_trivia?: Token[]
-  ): SyntaxNode {
+  ): SyntaxLeaf {
     return {
       kind,
       text: text,

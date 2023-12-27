@@ -14,3 +14,4 @@ fn vtx_main(@builtin(vertex_index) vertex_index : u32) -> @builtin(position) vec
 fn frag_main() -> @location(0) vec4f {
   return vec4(1, sin(f32(frame) / 128), 0, 1);
 }
+AAA

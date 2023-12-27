@@ -1,47 +1,48 @@
 import { RGPUParser } from "./parser";
 import { TokenKind } from "./tokens";
 import {
-  RemainingData,
-  SimplifiedSyntaxNode,
-  SyntaxNode,
+  SimplifiedSyntax,
+  Syntax,
   Token,
   binary_op_types,
   binary_op_precedence,
   literal_types,
   unary_op_types,
   unary_op_precedence,
+  isSyntaxLeaf,
+  isSyntaxNode,
+  SyntaxNode,
 } from "./types";
 
-export function serialize_nodes(syntax: SyntaxNode): string {
+export function serialize_nodes(syntax: Syntax): string {
   const pre = syntax.leading_trivia.map((v) => v.text).join("");
   const post = syntax.trailing_trivia.map((v) => v.text).join("");
 
-  if (typeof syntax.children === "undefined") {
+  if (isSyntaxLeaf(syntax)) {
     return `${pre}${syntax.text}${post}`;
-  } else {
+  } else if (isSyntaxNode(syntax)) {
     const child_text = syntax.children.map(serialize_nodes).join("");
     return `${pre}${child_text}${post}`;
   }
+
+  return "";
 }
 
-export function simplify_cst(syntax: SyntaxNode): SimplifiedSyntaxNode {
+export function simplify_cst(syntax: Syntax): SimplifiedSyntax {
   const pre = syntax.leading_trivia.map((v) => v.text).join("");
   const post = syntax.trailing_trivia.map((v) => v.text).join("");
   const is_error =
     syntax.kind === TokenKind.ERR_ERROR || syntax.kind === TokenKind.ERR_NONE;
 
-  if (
-    typeof syntax.children === "undefined" &&
-    typeof syntax.text !== "undefined"
-  ) {
-    const node: SimplifiedSyntaxNode = {
+  if (isSyntaxLeaf(syntax)) {
+    const node: SimplifiedSyntax = {
       text: `${pre}${syntax.text}${post}`,
     };
     if (is_error) node.error = true;
 
     return node;
   } else {
-    const node: SimplifiedSyntaxNode = {
+    const node: SimplifiedSyntax = {
       pre,
       children: syntax.children.map(simplify_cst),
       post,
@@ -55,17 +56,17 @@ export function simplify_cst(syntax: SyntaxNode): SimplifiedSyntaxNode {
 export class RGPUExprParser extends RGPUParser {
   private precedence(): number {
     const next = this.next_token();
-    if (!next || !binary_op_types.has(next.kind)) return 0;
+    if (!next || !(next.kind in binary_op_precedence)) return 0;
     return binary_op_precedence[next.kind];
   }
 
   private finish_block(
-    expr: SyntaxNode,
+    expr: Syntax,
     kind: TokenKind,
-    l_node: SyntaxNode,
-    r_node: SyntaxNode
+    l_node: Syntax,
+    r_node: Syntax
   ): SyntaxNode {
-    if (typeof expr.children !== "undefined") {
+    if (isSyntaxNode(expr)) {
       // node
       expr.kind = kind;
       expr.children.unshift(l_node);
@@ -83,7 +84,7 @@ export class RGPUExprParser extends RGPUParser {
     }
   }
 
-  private parse_prefix(token: Token): SyntaxNode {
+  private parse_prefix(token: Token): Syntax {
     // we expected an expression, but didn't get one
     if (!token) {
       // missing token in the stream /
@@ -110,7 +111,7 @@ export class RGPUExprParser extends RGPUParser {
     }
 
     if (unary_op_types.has(token.kind)) {
-      const operator: SyntaxNode = {
+      const operator: Syntax = {
         kind: token.kind,
         text: token.text,
         leading_trivia: [],
@@ -127,7 +128,7 @@ export class RGPUExprParser extends RGPUParser {
 
     // PARENS in Arithmetic Expressions
     if (token.kind === TokenKind.SYM_LPAREN) {
-      const l_node: SyntaxNode = {
+      const l_node: Syntax = {
         kind: token.kind,
         text: token.text,
         leading_trivia: [],
@@ -157,7 +158,7 @@ export class RGPUExprParser extends RGPUParser {
   }
 
   parse_call_expression(
-    left: SyntaxNode,
+    left: Syntax,
     token: Token,
     closing_token_kind: TokenKind,
     call_kind: TokenKind,
@@ -197,7 +198,7 @@ export class RGPUExprParser extends RGPUParser {
       }
     }
 
-    const l_node: SyntaxNode = {
+    const l_node: Syntax = {
       kind: token.kind,
       text: token.text,
       leading_trivia: [],
@@ -219,7 +220,7 @@ export class RGPUExprParser extends RGPUParser {
     };
   }
 
-  private parse_infix(left: SyntaxNode, token: Token): SyntaxNode {
+  private parse_infix(left: Syntax, token: Token): SyntaxNode {
     // Handle Infix Arithmetic Expressions, Logical Expressions, Bitwise expressions
     // AND member access (as the highest precedence binary operator)
     if (binary_op_types.has(token.kind)) {
@@ -278,7 +279,7 @@ export class RGPUExprParser extends RGPUParser {
     }
   }
 
-  template_ident() {
+  template_ident(): Syntax {
     let { matched, node: left } = this.accept(TokenKind.SYM_IDENTIFIER, true);
     if (!matched) return null;
 
@@ -291,12 +292,12 @@ export class RGPUExprParser extends RGPUParser {
     return this.absorb_trailing_trivia(left);
   }
 
-  template() {
+  template(): SyntaxNode {
     if (!this.check(TokenKind.SYM_TEMPLATE_LIST_START)) {
       return null;
     }
 
-    let left: SyntaxNode = {
+    let left: Syntax = {
       kind: TokenKind.SYM_DISAMBIGUATE_TEMPLATE,
       text: "",
       leading_trivia: [],
@@ -312,8 +313,8 @@ export class RGPUExprParser extends RGPUParser {
     return this.absorb_trailing_trivia(left);
   }
 
-  lhs(): SyntaxNode {
-    const lhs: SyntaxNode = {
+  lhs(): Syntax {
+    const lhs: Syntax = {
       kind: TokenKind.AST_LHS_EXPRESSION,
       children: [],
       leading_trivia: [],
@@ -360,14 +361,14 @@ export class RGPUExprParser extends RGPUParser {
     return this.absorb_trailing_trivia(lhs);
   }
 
-  private component_specifier(): SyntaxNode {
+  private component_specifier(): Syntax {
     // [here](https://www.w3.org/TR/WGSL/#syntax-component_or_swizzle_specifier)
     if (!(this.check(TokenKind.SYM_LBRACKET) || this.check(TokenKind.SYM_DOT)))
       return null;
 
     // TODO(Nic): continue here
     // https://www.w3.org/TR/WGSL/#syntax-component_or_swizzle_specifier
-    const spec_node: SyntaxNode = {
+    const spec_node: Syntax = {
       kind: TokenKind.AST_LHS_COMPONENT_SPECIFIER,
       children: [],
       leading_trivia: [],
@@ -399,7 +400,7 @@ export class RGPUExprParser extends RGPUParser {
     }
   }
 
-  expr(precedence: number = 0): SyntaxNode {
+  expr(precedence: number = 0): Syntax {
     let { current, trivia: leading_trivia } = this.advance();
     let left = this.parse_prefix(current);
 
@@ -426,7 +427,7 @@ export class RGPUExprParser extends RGPUParser {
     return this.absorb_trailing_trivia(left);
   }
 
-  parse(tokens: Token[]): SyntaxNode {
+  parse(tokens: Token[]): Syntax {
     this.reset(tokens);
     return this.expr();
   }
