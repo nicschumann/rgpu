@@ -3,6 +3,7 @@
   "workspaces": [
     "rgpu",
     "rgpu-parser",
+    "rgpu-language",
     "site"
   ],
   "packageManager": "yarn@4.0.2",

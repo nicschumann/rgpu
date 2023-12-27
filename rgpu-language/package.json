@@ -1,0 +1,57 @@
+{
+  "name": "rgpu-language",
+  "description": "A language server extension for WGSL.",
+  "version": "0.1.0",
+  "author": "nicschumann",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "activationEvents": [
+    "onLanguage:wgsl"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Example configuration",
+      "properties": {
+        "rgpuWGSLLanguage.maxNumberOfProblems": {
+          "scope": "resource",
+          "type": "number",
+          "default": 100,
+          "description": "Controls the maximum number of problems produced by the server."
+        },
+        "rgpuWGSLLanguage.trace.server": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "verbose",
+          "description": "Traces the communication between VS Code and the language server."
+        }
+      }
+    }
+  },
+  "packageManager": "yarn@4.0.2",
+  "dependencies": {
+    "@types/istanbul-lib-coverage": "^2.0.6",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.10.5",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.19.10",
+    "mocha": "^10.2.0",
+    "rgpu-parser": "workspace:*",
+    "typescript": "^5.3.3",
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11"
+  },
+  "scripts": {
+    "vscode:prepublish": "yarn run compile",
+    "compile": "esbuild ./server/src/server.ts --bundle --outdir=dist  --external:vscode --format=cjs --platform=node; esbuild ./client/src/extension.ts --bundle --outdir=dist  --external:vscode --format=cjs --platform=node; ",
+    "type-check": "tsc -b"
+  }
+}
