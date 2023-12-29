@@ -1,6 +1,17 @@
 # RGPU Parser
 
-`rgpu-parser` is a permissive/tolerant parser for [WGSL](https://www.w3.org/TR/WGSL/), the shading language for webgpu. It is designed to be integrated with linters and semantic analysis tools, rather than compilers. It emphasizes parsing permissively, in the sense that it partially parses syntactically incorrect programs, so that linting rules can be applied to valid subtrees of the parse. This is because it is meant to be integrated into editors, where most input programs are "in progress", rather than compilers, where most input programs are "done".
+`rgpu-parser` is a permissive/tolerant parser and IDE frontend for [WGSL](https://www.w3.org/TR/WGSL/), the shading language for webgpu. It is designed to be integrated with linters and semantic analysis tools, rather than compilers. It emphasizes parsing permissively, in the sense that it partially parses syntactically incorrect programs, so that linting rules can be applied to valid subtrees of the parse. This is because it is meant to be integrated into editors, where most input programs are "in progress", rather than compilers, where most input programs are "done".
+
+## Features
+
+- [x] **Tokenization**. This parser provides a fast and spec-compliant tokenizer that scans source into sequences of parsable tokens.
+- [x] **Tolerant Parsing**. This parser proves a tolerant parse tree for all inputs. It tries to parse as much of the input string as possible, even if that input is partial or has syntax errors.
+- [x] **Trivia Capture**. The parser collects all trivia and builds it into the syntax tree. All white space and comments are attached to their nearest node in the parse tree. In other words, parsing is nondestructive.
+
+## TODO
+
+- [ ] Implement line and character position tracking during CST creation.
+- [ ] Implement more verbose error types during CST creation (separate from AST_TYPES).
 
 ## References
 

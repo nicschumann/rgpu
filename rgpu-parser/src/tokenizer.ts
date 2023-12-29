@@ -1,7 +1,7 @@
 // [notes](https://github.com/rust-lang/rust-analyzer/blob/master/docs/dev/syntax.md)
 
 import { TokenKind, tokenDefinitions } from "./tokens";
-import { TemplateList, Token } from "./types";
+import { CharPosition, TemplateList, Token } from "./types";
 
 type UnclosedCandidate = {
   source_position: number; // position in the source text
@@ -15,6 +15,7 @@ export function serialize_tokens(tokens: Token[]): string {
 
 export class RPGUTokenizer {
   tokens: Token[] = [];
+  position: CharPosition = { row: 0, col: 0, offset: 0 };
   template_lists: TemplateList[] = [];
   source: string | null = null;
   pattern: RegExp | null = null;
@@ -28,6 +29,7 @@ export class RPGUTokenizer {
   start(source: string) {
     this.tokens = [];
     this.template_lists = [];
+    this.position = { row: 0, col: 0, offset: 0 };
     this.source = source;
     this.index = 0;
     this.pattern = new RegExp(
@@ -55,9 +57,18 @@ export class RPGUTokenizer {
         if (typeof match[i] !== "undefined") {
           const def = tokenDefinitions[i - 1];
           const kind = def.type;
-          const token = {
+
+          const start: CharPosition = { ...this.position };
+
+          const token: Token = {
             kind,
             text: match[0],
+            start,
+            end: {
+              offset: start.offset + match[0].length,
+              col: start.col + match[0].length,
+              row: start.row,
+            },
           };
 
           return token;
@@ -70,6 +81,21 @@ export class RPGUTokenizer {
 
   consume_token(token: Token) {
     this.index += token.text.length;
+
+    this.position = {
+      offset: this.index,
+
+      col:
+        token.kind !== TokenKind.LINEBREAK
+          ? this.position.col + token.text.length
+          : 0,
+
+      row:
+        token.kind !== TokenKind.LINEBREAK
+          ? this.position.row
+          : this.position.row + 1,
+    };
+
     this.tokens.push(token);
   }
 
@@ -134,6 +160,12 @@ export class RPGUTokenizer {
           this.consume_token({
             kind: TokenKind.SYM_GREATER,
             text: ">",
+            start: { ...token.start },
+            end: {
+              row: token.end.row,
+              col: token.start.col + 1,
+              offset: token.start.offset + 1,
+            },
           });
         } else {
           this.consume_token(token);

@@ -667,7 +667,7 @@ export class RGPUStmtParser extends RGPUParser {
     return this.absorb_trailing_trivia(stmt);
   }
 
-  compound_stmt(): Syntax {
+  compound_stmt(): SyntaxNode {
     let compound_stmt: Syntax = {
       kind: TokenKind.AST_COMPOUND_STATEMENT,
       children: [],
@@ -687,7 +687,7 @@ export class RGPUStmtParser extends RGPUParser {
 
     // parse 0 or more single statements
     if (matched) {
-      while (!this.check(TokenKind.SYM_RBRACE)) {
+      while (this.next_token() && !this.check(TokenKind.SYM_RBRACE)) {
         let stmt = this.single_stmt();
         compound_stmt.children.push(stmt);
 

@@ -52,6 +52,6 @@
   "scripts": {
     "vscode:prepublish": "yarn run compile",
     "compile": "esbuild ./server/src/server.ts --bundle --outdir=dist  --external:vscode --format=cjs --platform=node; esbuild ./client/src/extension.ts --bundle --outdir=dist  --external:vscode --format=cjs --platform=node; ",
-    "type-check": "tsc -b"
+    "type-check": "tsc -noEmit"
   }
 }

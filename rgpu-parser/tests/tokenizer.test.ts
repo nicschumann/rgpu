@@ -97,7 +97,8 @@ describe("RGPU Tokenizer", () => {
     const testcases = ["var a123 = 100;"];
 
     testcases.forEach((testcase) => {
-      const r = lexer.tokenize_source(testcase).map(normalize);
+      const tokens = lexer.tokenize_source(testcase);
+      const r = tokens.map(normalize);
       expect(r).to.deep.equal([
         { kind: TokenKind.KEYWORD_VAR, text: "var" },
         { kind: TokenKind.BLANKSPACE, text: " " },
@@ -140,5 +141,37 @@ describe("RGPU Tokenizer", () => {
       { kind: TokenKind.SYM_GREATER, text: ">" },
       { kind: TokenKind.SYM_IDENTIFIER, text: "d" },
     ]);
+  });
+
+  it("should preserve token positions", () => {
+    const lexer = new RPGUTokenizer();
+
+    ["var a = 100;\nvar b = 200", "a<i32, b<f, 2>> \n a<i32, b<f, 2>>"].forEach(
+      (testcase) => {
+        const testcase_lines = testcase
+          .split("\n")
+          .map((line, i, a) => (i < a.length - 1 ? `${line}\n` : line));
+
+        const tokens = lexer.tokenize_source(testcase);
+        // console.log(tokens);
+        tokens.forEach((token) => {
+          const { row: sr, col: sc, offset: so } = token.start;
+          const { row: er, col: ec, offset: eo } = token.end;
+
+          expect(sr).to.equal(er); // no individual token should span lines.
+
+          const rc_text = testcase_lines[sr].slice(sc, ec);
+          const o_text = testcase.slice(so, eo);
+
+          // console.log(token);
+          // console.log(`tkn text: "${token.text}"`);
+          // console.log(`rc text: "${rc_text}"`);
+          // console.log(`o text: "${o_text}"`);
+
+          expect(token.text).to.equal(rc_text); // the token should equal the text at this row/column exactly
+          expect(token.text).to.equal(o_text); // the token should equal the text at this offset exactly
+        });
+      }
+    );
   });
 });

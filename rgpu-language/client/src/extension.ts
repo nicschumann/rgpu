@@ -17,9 +17,15 @@ export function activate(context: ExtensionContext) {
 
   const serverModule = context.asAbsolutePath(path.join("dist", "server.js")); // target compiled server code.
 
+  const debugOptions = { execArgv: ["--nolazy", "--inspect=6009"] };
+
   const serverOptions: ServerOptions = {
     run: { module: serverModule, transport: TransportKind.ipc },
-    debug: { module: serverModule, transport: TransportKind.ipc },
+    debug: {
+      module: serverModule,
+      transport: TransportKind.ipc,
+      options: debugOptions,
+    },
   };
 
   const clientOptions: LanguageClientOptions = {

@@ -42,9 +42,30 @@ describe("RGPU Translation Unit Parser", () => {
       const serialized = serialize_nodes(cst);
 
       // console.log(JSON.stringify(cst, null, 4));
-      if (i === testcases.length - 1) {
-        console.log(JSON.stringify(simplify_cst(cst), null, 4));
-      }
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(parser.remaining());
+
+      expect(serialized).to.deep.equal(testcase);
+    });
+  });
+
+  it(".translation_unit() should partially parse incorrect programs", () => {
+    const lexer = new RPGUTokenizer();
+    const parser = new RGPUDeclParser();
+
+    const testcases = ["let a = 1.0; const a = ; 1.0", "fn main( { a"];
+
+    testcases.forEach((testcase) => {
+      const tokens = lexer.tokenize_source(testcase);
+
+      // if you need to debug token stream...
+      // console.log(tokens);
+      parser.reset(tokens);
+      const cst = parser.translation_unit();
+
+      const serialized = serialize_nodes(cst);
+
+      // console.log(JSON.stringify(cst, null, 4));
       // console.log(JSON.stringify(simplify_cst(cst), null, 4));
       // console.log(parser.remaining());
 

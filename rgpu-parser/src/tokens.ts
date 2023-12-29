@@ -179,6 +179,15 @@ export enum TokenKind {
   ERR_NONE,
 }
 
+/**
+ * TODO(Nic): flow this new type through
+ * all the syntax.
+ */
+export enum ErrorKind {
+  ERR_NO_ERROR,
+  ERR_UNKNOWN,
+}
+
 export type UnaryOperatorTokenKind =
   | TokenKind.SYM_DASH // 10
   | TokenKind.SYM_BANG // 10

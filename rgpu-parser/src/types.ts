@@ -4,9 +4,17 @@ import {
   UnaryOperatorTokenKind,
 } from "./tokens";
 
+export type CharPosition = {
+  row: number; // which line is this character on?
+  col: number; // which column is this character in?
+  offset: number; // what is the offset of this character into the program as a string?
+};
+
 export type Token = {
   kind: TokenKind;
   text: string;
+  start: CharPosition;
+  end: CharPosition;
   seen?: boolean;
 };
 

@@ -65,7 +65,7 @@ export class RGPUDeclParser extends RGPUParser {
     return expr;
   }
 
-  private compound_stmt(): Syntax {
+  private compound_stmt(): SyntaxNode {
     const tokens = this.tokens.slice(this.current_position + 1);
     this.stmt_parser.reset(tokens);
     const expr = this.stmt_parser.compound_stmt();
@@ -422,7 +422,7 @@ export class RGPUDeclParser extends RGPUParser {
       TokenKind.SYM_SEMICOLON,
       TokenKind.KEYWORD_VAR,
       TokenKind.KEYWORD_CONST,
-      // TokenKind.KEYWORD_LET,
+      TokenKind.KEYWORD_LET,
       TokenKind.KEYWORD_OVERRIDE,
       TokenKind.KEYWORD_FN,
       TokenKind.KEYWORD_STRUCT,
@@ -439,7 +439,8 @@ export class RGPUDeclParser extends RGPUParser {
     if (
       this.check(TokenKind.KEYWORD_VAR) ||
       this.check(TokenKind.KEYWORD_CONST) ||
-      this.check(TokenKind.KEYWORD_OVERRIDE)
+      this.check(TokenKind.KEYWORD_OVERRIDE) ||
+      this.check(TokenKind.KEYWORD_LET)
     ) {
       decl = this.global_var_decl(decl);
       const { node } = this.accept(TokenKind.SYM_SEMICOLON, true);
@@ -484,6 +485,11 @@ export class RGPUDeclParser extends RGPUParser {
       const decl = this.global_decl();
 
       if (decl.kind === TokenKind.ERR_ERROR) {
+        // we couldn't find a global declaration here.
+        // let's try and parse a compound statement...
+        let stmt = this.compound_stmt();
+        stmt.kind = TokenKind.ERR_ERROR;
+
         // advance until we find a valid token for a decl.
         // NOTE(Nic): we should do something similar in the compound_statement parser
         const tokens = this.advance_until(

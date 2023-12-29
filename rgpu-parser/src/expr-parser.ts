@@ -14,7 +14,11 @@ import {
   SyntaxNode,
 } from "./types";
 
-export function serialize_nodes(syntax: Syntax): string {
+export function serialize_nodes(syntax: Syntax | null): string {
+  if (syntax == null) {
+    return "<null>";
+  }
+
   const pre = syntax.leading_trivia.map((v) => v.text).join("");
   const post = syntax.trailing_trivia.map((v) => v.text).join("");
 
