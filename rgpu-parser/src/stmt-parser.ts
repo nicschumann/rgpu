@@ -36,7 +36,7 @@ export class RGPUStmtParser extends RGPUParser {
     return expr;
   }
 
-  private template_ident(): Syntax {
+  private template_ident(): Syntax | null {
     const tokens = this.tokens.slice(this.current_position + 1);
     this.expr_parser.reset(tokens);
     const expr = this.expr_parser.template_ident();
@@ -46,7 +46,7 @@ export class RGPUStmtParser extends RGPUParser {
     return expr;
   }
 
-  private template(): Syntax {
+  private template(): Syntax | null {
     const tokens = this.tokens.slice(this.current_position + 1);
     this.expr_parser.reset(tokens);
     const expr = this.expr_parser.template();
@@ -88,13 +88,13 @@ export class RGPUStmtParser extends RGPUParser {
       const template_ident = this.template_ident();
 
       if (template_ident) decl.children.push(template_ident);
-      else decl.children.push(this.leaf(TokenKind.ERR_ERROR));
+      else decl.children.push(this.error(TokenKind.ERR_ERROR));
     }
 
     return this.absorb_trailing_trivia(decl);
   }
 
-  var_stmt(): Syntax {
+  var_stmt(): Syntax | null {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-variable_or_value_statement)
     if (
       this.check(TokenKind.KEYWORD_CONST) ||
@@ -105,12 +105,12 @@ export class RGPUStmtParser extends RGPUParser {
         current.kind === TokenKind.KEYWORD_CONST
           ? TokenKind.AST_CONST_DECLARATION_STATEMENT
           : TokenKind.AST_LET_DECLARATION_STATEMENT,
-        [this.leaf(current.kind, current.text, trivia)]
+        [this.leaf(current, trivia)]
       );
 
       const ident = this.optionally_typed_ident();
       if (ident) decl.children.push(ident);
-      else decl.children.push(this.leaf(TokenKind.ERR_ERROR));
+      else decl.children.push(this.error(TokenKind.ERR_ERROR));
 
       const { matched, node } = this.accept(TokenKind.SYM_EQUAL, true);
       if (matched) decl.children.push(node, this.expr());
@@ -141,7 +141,7 @@ export class RGPUStmtParser extends RGPUParser {
     return null; // rule didn't match
   }
 
-  const_assert(): Syntax {
+  const_assert(): Syntax | null {
     // NOTE(Nic): [this](https://www.w3.org/TR/WGSL/#syntax-const_assert_statement)
 
     const { matched: ca_matched, node: ca_node } = this.accept(
@@ -163,7 +163,7 @@ export class RGPUStmtParser extends RGPUParser {
     return this.absorb_trailing_trivia(decl);
   }
 
-  private assignment_or_expr(stmt: SyntaxNode): SyntaxNode {
+  private assignment_or_expr(stmt: SyntaxNode): SyntaxNode | null {
     if (
       this.check(TokenKind.SYM_STAR) ||
       this.check(TokenKind.SYM_AMP) ||
@@ -185,6 +185,7 @@ export class RGPUStmtParser extends RGPUParser {
 
       if (
         this.next_token() &&
+        // @ts-ignore
         assignment_op_types.has(this.next_token().kind)
       ) {
         // this is an assignment
@@ -546,7 +547,8 @@ export class RGPUStmtParser extends RGPUParser {
       stmt.kind = TokenKind.AST_DECLARATION_STATEMENT;
       // NOTE(Nic): there are certain cases where global var decl is not what we want,
       // but in our case, more permissive is good.
-      stmt.children.push(this.var_stmt());
+      const var_stmt = this.var_stmt();
+      if (var_stmt) stmt.children.push(var_stmt);
 
       const { node: sc_node } = this.accept(TokenKind.SYM_SEMICOLON, true);
       stmt.children.push(sc_node);
@@ -560,7 +562,8 @@ export class RGPUStmtParser extends RGPUParser {
       stmt.kind = TokenKind.AST_CONST_ASSERT_STATEMENT;
       // NOTE(Nic): there are certain cases where global var decl is not what we want,
       // but in our case, more permissive is good.
-      stmt.children.push(this.const_assert());
+      const ca_stmt = this.const_assert();
+      if (ca_stmt) stmt.children.push(ca_stmt);
 
       const { node: sc_node } = this.accept(TokenKind.SYM_SEMICOLON, true);
       stmt.children.push(sc_node);
@@ -589,6 +592,7 @@ export class RGPUStmtParser extends RGPUParser {
       if (!this.check(TokenKind.SYM_SEMICOLON)) {
         if (
           this.next_token() &&
+          // @ts-ignore
           assignment_or_expr_tokens.has(this.next_token().kind)
         ) {
           const assign = this.assignment_or_expr({
@@ -597,13 +601,15 @@ export class RGPUStmtParser extends RGPUParser {
             leading_trivia: [],
             trailing_trivia: [],
           });
-          for_header.children.push(assign);
+          if (assign) for_header.children.push(assign);
         } else if (
           this.next_token() &&
+          // @ts-ignore
           local_declaration_tokens.has(this.next_token().kind)
         ) {
           // try and parse a local declaration.
-          for_header.children.push(this.var_stmt());
+          const var_stmt = this.var_stmt();
+          if (var_stmt) for_header.children.push(var_stmt);
         }
       }
 
@@ -622,6 +628,7 @@ export class RGPUStmtParser extends RGPUParser {
       if (!this.check(TokenKind.SYM_RPAREN)) {
         if (
           this.next_token() &&
+          // @ts-ignore
           assignment_or_expr_tokens.has(this.next_token().kind)
         ) {
           const assign = this.assignment_or_expr({
@@ -630,7 +637,7 @@ export class RGPUStmtParser extends RGPUParser {
             leading_trivia: [],
             trailing_trivia: [],
           });
-          for_header.children.push(assign);
+          if (assign) for_header.children.push(assign);
         }
       }
 
@@ -651,6 +658,7 @@ export class RGPUStmtParser extends RGPUParser {
       this.check(TokenKind.SYM_IDENTIFIER)
     ) {
       // variable updating assignment
+      // @ts-ignore // guaranteed not null because we pre-checked.
       stmt = this.assignment_or_expr(stmt);
 
       const { node: semicolon_node } = this.accept(

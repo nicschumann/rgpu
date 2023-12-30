@@ -30,6 +30,8 @@ export type SyntaxNode = {
   children: Syntax[];
   leading_trivia: Token[];
   trailing_trivia: Token[];
+  start?: CharPosition;
+  end?: CharPosition;
 };
 
 export type SyntaxLeaf = {
@@ -37,6 +39,8 @@ export type SyntaxLeaf = {
   text: string;
   leading_trivia: Token[];
   trailing_trivia: Token[];
+  start?: CharPosition;
+  end?: CharPosition;
 };
 
 export function isSyntaxNode(data: Syntax): data is SyntaxNode {

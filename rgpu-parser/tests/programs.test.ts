@@ -53,7 +53,11 @@ describe("RGPU Translation Unit Parser", () => {
     const lexer = new RPGUTokenizer();
     const parser = new RGPUDeclParser();
 
-    const testcases = ["let a = 1.0; const a = ; 1.0", "fn main( { a"];
+    const testcases = [
+      "let a = 1.0; const a = ; 1.0",
+      "fn main( { a",
+      "var<storage> a: i32; for (let a = (a + b); a <; a += ) { let a = 1",
+    ];
 
     testcases.forEach((testcase) => {
       const tokens = lexer.tokenize_source(testcase);

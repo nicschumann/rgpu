@@ -186,19 +186,13 @@ export class RGPUExprParser extends RGPUParser {
         let { matched, node } = this.accept(TokenKind.SYM_COMMA, true);
         more_arguments = matched;
 
-        if (matched) {
-          args.children.push(node);
-        }
+        if (matched) args.children.push(node);
 
         /**
          * NOTE(Nic): Are trailing commas okay in function calls? Or only in template lists?
          * If not allowed in template lists, remove this check.
          */
-        if (this.check(closing_token_kind)) {
-          more_arguments = false;
-        } else {
-          more_arguments = matched;
-        }
+        if (this.check(closing_token_kind)) more_arguments = false;
       }
     }
 
@@ -229,21 +223,7 @@ export class RGPUExprParser extends RGPUParser {
     // AND member access (as the highest precedence binary operator)
     if (binary_op_types.has(token.kind)) {
       const right = this.expr(binary_op_precedence[token.kind]);
-      return {
-        kind: token.kind,
-        children: [
-          left,
-          {
-            kind: token.kind,
-            text: token.text,
-            leading_trivia: [],
-            trailing_trivia: [],
-          },
-          right,
-        ],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      return this.node(token.kind, [left, this.leaf(token), right]);
     }
 
     // Handle Multi-argument Function Calls
@@ -281,9 +261,15 @@ export class RGPUExprParser extends RGPUParser {
         TokenKind.ERR_ERROR
       );
     }
+
+    return this.node(TokenKind.ERR_ERROR, [
+      left,
+      this.leaf(token),
+      this.error(TokenKind.ERR_ERROR),
+    ]);
   }
 
-  template_ident(): Syntax {
+  template_ident(): Syntax | null {
     let { matched, node: left } = this.accept(TokenKind.SYM_IDENTIFIER, true);
     if (!matched) return null;
 
@@ -296,17 +282,12 @@ export class RGPUExprParser extends RGPUParser {
     return this.absorb_trailing_trivia(left);
   }
 
-  template(): SyntaxNode {
+  template(): SyntaxNode | null {
     if (!this.check(TokenKind.SYM_TEMPLATE_LIST_START)) {
       return null;
     }
 
-    let left: Syntax = {
-      kind: TokenKind.SYM_DISAMBIGUATE_TEMPLATE,
-      text: "",
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
+    let left: Syntax = this.error(TokenKind.SYM_DISAMBIGUATE_TEMPLATE);
 
     const { current: template_start_token, trivia: leading_trivia } =
       this.advance();
@@ -351,12 +332,7 @@ export class RGPUExprParser extends RGPUParser {
     if (ident) {
       lhs.children.push(ident);
     } else {
-      lhs.children.push({
-        kind: TokenKind.ERR_ERROR,
-        text: "",
-        leading_trivia: [],
-        trailing_trivia: [],
-      });
+      lhs.children.push(this.error(TokenKind.ERR_ERROR));
     }
 
     const maybe_specifier = this.component_specifier();
@@ -365,7 +341,7 @@ export class RGPUExprParser extends RGPUParser {
     return this.absorb_trailing_trivia(lhs);
   }
 
-  private component_specifier(): Syntax {
+  private component_specifier(): Syntax | null {
     // [here](https://www.w3.org/TR/WGSL/#syntax-component_or_swizzle_specifier)
     if (!(this.check(TokenKind.SYM_LBRACKET) || this.check(TokenKind.SYM_DOT)))
       return null;
@@ -402,6 +378,8 @@ export class RGPUExprParser extends RGPUParser {
 
       return this.absorb_trailing_trivia(spec_node);
     }
+
+    return null;
   }
 
   expr(precedence: number = 0): Syntax {
@@ -417,10 +395,13 @@ export class RGPUExprParser extends RGPUParser {
       // precedence dictates that we're still in the same expression
       (precedence < this.precedence() ||
         // the next token is a paren, indicating a function call
+        // @ts-ignore
         this.next_token().kind === TokenKind.SYM_LPAREN ||
         // the next token is a bracket, indicating an array index
+        // @ts-ignore
         this.next_token().kind === TokenKind.SYM_LBRACKET ||
         // the next token starts a template list
+        // @ts-ignore
         this.next_token().kind === TokenKind.SYM_TEMPLATE_LIST_START)
     ) {
       let { current, trivia: trailing_trivia } = this.advance();

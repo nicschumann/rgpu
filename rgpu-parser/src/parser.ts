@@ -72,22 +72,12 @@ export class RGPUParser {
 
       return {
         matched: true,
-        node: {
-          kind: current.kind,
-          text: current.text,
-          leading_trivia: trivia,
-          trailing_trivia: [],
-        },
+        node: this.leaf(current, trivia),
       };
     } else {
       return {
         matched: false,
-        node: {
-          kind: error_kind,
-          text: "",
-          leading_trivia: [],
-          trailing_trivia: [],
-        },
+        node: this.error(error_kind),
       };
     }
   }
@@ -120,6 +110,7 @@ export class RGPUParser {
 
     const consumed: Token[] = [];
 
+    // @ts-ignore
     while (this.next_token() && !valid.has(this.next_token().kind)) {
       let { trivia, current } = this.advance();
       consumed.push(...trivia);
@@ -145,7 +136,10 @@ export class RGPUParser {
 
   remaining(): RemainingData {
     const candidates = this.tokens.slice(this.current_position + 1);
-    const remaining = { index: this.current_position + 1, tokens: [] };
+    const remaining: RemainingData = {
+      index: this.current_position + 1,
+      tokens: [],
+    };
     let idx = 0;
 
     while (idx < candidates.length && candidates[idx].seen) idx += 1;
@@ -201,14 +195,28 @@ export class RGPUParser {
   }
 
   protected leaf(
+    from: Token,
+    leading_trivia?: Token[],
+    trailing_trivia?: Token[]
+  ): SyntaxLeaf {
+    return {
+      kind: from.kind,
+      text: from.text,
+      leading_trivia: leading_trivia || [],
+      trailing_trivia: trailing_trivia || [],
+      start: from.start,
+      end: from.end,
+    };
+  }
+
+  protected error(
     kind: TokenKind,
-    text: string = "",
     leading_trivia?: Token[],
     trailing_trivia?: Token[]
   ): SyntaxLeaf {
     return {
       kind,
-      text: text,
+      text: "",
       leading_trivia: leading_trivia || [],
       trailing_trivia: trailing_trivia || [],
     };

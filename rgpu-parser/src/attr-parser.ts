@@ -97,7 +97,7 @@ export class RGPUAttrParser extends RGPUParser {
          * when the terminal set contains SYM_IDENTIFIER, or another symbol, that
          * may be part of an attribute expression...
          */
-        attribute.children.push(this.leaf(TokenKind.ERR_ERROR, "", consumed));
+        attribute.children.push(this.error(TokenKind.ERR_ERROR, consumed));
       }
       // parse 0 or more attributes
       decl.children.push(attribute);
@@ -115,7 +115,7 @@ export class RGPUAttrParser extends RGPUParser {
 
     let attr: SyntaxNode = {
       kind: TokenKind.AST_ATTRIBUTE,
-      children: [at_node, this.leaf(current.kind, current.text, trivia)],
+      children: [at_node, this.leaf(current, trivia)],
       leading_trivia: [],
       trailing_trivia: [],
     };

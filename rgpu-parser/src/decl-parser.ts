@@ -32,7 +32,7 @@ export class RGPUDeclParser extends RGPUParser {
     return expr;
   }
 
-  private template_ident(): Syntax {
+  private template_ident(): Syntax | null {
     const tokens = this.tokens.slice(this.current_position + 1);
     this.expr_parser.reset(tokens);
     const expr = this.expr_parser.template_ident();
@@ -42,7 +42,7 @@ export class RGPUDeclParser extends RGPUParser {
     return expr;
   }
 
-  private template(): Syntax {
+  private template(): Syntax | null {
     const tokens = this.tokens.slice(this.current_position + 1);
     this.expr_parser.reset(tokens);
     const expr = this.expr_parser.template();
@@ -94,7 +94,7 @@ export class RGPUDeclParser extends RGPUParser {
       const template_ident = this.template_ident();
 
       if (template_ident) decl.children.push(template_ident);
-      else decl.children.push(this.leaf(TokenKind.ERR_ERROR));
+      else decl.children.push(this.error(TokenKind.ERR_ERROR));
     }
 
     return this.absorb_trailing_trivia(decl);
@@ -204,7 +204,7 @@ export class RGPUDeclParser extends RGPUParser {
 
     const type = this.template_ident();
     if (type) decl.children.push(type);
-    else decl.children.push(this.leaf(TokenKind.ERR_ERROR));
+    else decl.children.push(this.error(TokenKind.ERR_ERROR));
 
     return this.absorb_trailing_trivia(decl);
   }
@@ -261,8 +261,8 @@ export class RGPUDeclParser extends RGPUParser {
         // two errors, one for the missing var,
         // one for the missing ident node
         decl.children.push(
-          this.leaf(TokenKind.ERR_ERROR),
-          this.leaf(TokenKind.ERR_ERROR)
+          this.error(TokenKind.ERR_ERROR),
+          this.error(TokenKind.ERR_ERROR)
         );
       }
 
@@ -279,7 +279,7 @@ export class RGPUDeclParser extends RGPUParser {
 
       const ident = this.optionally_typed_ident();
       if (ident) decl.children.push(ident);
-      else decl.children.push(this.leaf(TokenKind.ERR_ERROR));
+      else decl.children.push(this.error(TokenKind.ERR_ERROR));
 
       const { matched, node: equal_node } = this.accept(
         TokenKind.SYM_EQUAL,
@@ -313,7 +313,7 @@ export class RGPUDeclParser extends RGPUParser {
 
       const ident = this.optionally_typed_ident();
       if (ident) decl.children.push(ident);
-      else decl.children.push(this.leaf(TokenKind.ERR_ERROR));
+      else decl.children.push(this.error(TokenKind.ERR_ERROR));
 
       const { node: equal_node } = this.accept(TokenKind.SYM_EQUAL, true);
       decl.children.push(equal_node);
@@ -322,7 +322,7 @@ export class RGPUDeclParser extends RGPUParser {
       decl.children.push(expr);
     } else {
       // error case...
-      decl.children.push(this.leaf(TokenKind.ERR_ERROR));
+      decl.children.push(this.error(TokenKind.ERR_ERROR));
     }
 
     return this.absorb_trailing_trivia(decl);
@@ -394,7 +394,9 @@ export class RGPUDeclParser extends RGPUParser {
         let ret_type: Syntax = this.node(TokenKind.AST_FUNCTION_RETURN_TYPE);
 
         ret_type = this.attributes(ret_type, [TokenKind.SYM_IDENTIFIER]);
-        ret_type.children.push(this.template_ident());
+        const t_ident = this.template_ident();
+        if (t_ident) ret_type.children.push(t_ident);
+        else ret_type.children.push(this.error(TokenKind.ERR_ERROR));
         decl.children.push(ret_type);
       }
 
