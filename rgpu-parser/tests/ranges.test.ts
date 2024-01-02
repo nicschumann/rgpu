@@ -85,18 +85,31 @@ const check_cst_ranges_match_source = (
     typeof syntax.start === "undefined" &&
     typeof syntax.end === "undefined"
   ) {
-    // error node, probably...
-    return syntax.error !== ErrorKind.ERR_NO_ERROR;
+    // console.log("both undefined!", console.log(syntax));
+
+    if (isSyntaxNode(syntax)) {
+      /** NOTE(Nic): We've hit a node with no start or end annotations;
+       * only error nodes should be lower in the tree, below this.
+       * to ensure this in testing, we'll truncate the source code to the empty string,
+       * which will cause our assertions to fail if we try and look up any tokens.
+       */
+      return syntax.children.reduce(
+        (a, b) => a && check_cst_ranges_match_source(b, "", [""]),
+        true
+      );
+    } else {
+      // error node, probably...
+      return syntax.error !== ErrorKind.ERR_NO_ERROR;
+    }
   } else {
     // this is case that should never happen.
     // we have a structural check before runnning this that checks for this.
+    console.log("structural error!");
     return false;
   }
 };
 
 describe("RGPU Range Elaboration", () => {
-  let testcases: string[] = [];
-
   it("should correctly annotate lines and columns", () => {
     const lexer = new RPGUTokenizer();
     const parser = new RGPUDeclParser();
@@ -104,8 +117,8 @@ describe("RGPU Range Elaboration", () => {
     const testcases = [
       "var a = 10; var b = 1000f;",
       "@work(0,1 @binding(0) var<uniform, read> a : array<f32, 2> = a + b",
-      // "fn main( { a",
-      // "var<storage> a: i32; for (let a = (a + b); a <; a += ) { let a = 1",
+      "fn main( { a",
+      "var<storage> a: i32; for (let a = (a + b); a <; a += ) { let a = 1",
     ];
 
     testcases.forEach((testcase) => {
@@ -121,6 +134,10 @@ describe("RGPU Range Elaboration", () => {
       const cst = parser.translation_unit();
 
       elaborate_ranges(cst);
+
+      // console.log(JSON.stringify(cst, null, 4));
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(parser.remaining());
 
       const valid_structure = check_range_structure(cst);
       const valid_ranges = check_cst_ranges_match_source(
