@@ -1,12 +1,12 @@
 import { expect } from "chai";
-import { RPGUTokenizer, serialize_tokens } from "../src/tokenizer";
+import { RPGUTokenizer, serialize_tokens } from "../src/cst/tokenizer";
 import {
   RGPUExprParser,
   serialize_nodes,
   simplify_cst,
-} from "../src/expr-parser";
-import { RGPUStmtParser } from "../src/stmt-parser";
-import { RGPUAttrParser } from "../src/attr-parser";
+} from "../src/cst/expr-parser";
+import { RGPUStmtParser } from "../src/cst/stmt-parser";
+import { RGPUAttrParser } from "../src/cst/attr-parser";
 
 describe("RGPU Statement Parser", () => {
   it("should parse single statements", () => {

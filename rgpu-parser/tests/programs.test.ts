@@ -1,9 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
 import { expect } from "chai";
-import { RPGUTokenizer, serialize_tokens } from "../src/tokenizer";
-import { serialize_nodes, simplify_cst } from "../src/expr-parser";
-import { RGPUDeclParser } from "../src/decl-parser";
+import { RPGUTokenizer, serialize_tokens } from "../src/cst/tokenizer";
+import { serialize_nodes, simplify_cst } from "../src/cst/expr-parser";
+import { RGPUDeclParser } from "../src/cst/decl-parser";
 
 describe("RGPU Translation Unit Parser", () => {
   let testcases: string[] = [];

@@ -2,8 +2,8 @@ import { RGPUAttrParser } from "./attr-parser";
 import { RGPUExprParser } from "./expr-parser";
 import { RGPUParser } from "./parser";
 import { RGPUStmtParser } from "./stmt-parser";
-import { TokenKind } from "./tokens";
-import { Syntax, SyntaxNode } from "./types";
+import { TokenKind } from "../tokens";
+import { Syntax, SyntaxNode } from "../types";
 
 export class RGPUDeclParser extends RGPUParser {
   private expr_parser: RGPUExprParser;

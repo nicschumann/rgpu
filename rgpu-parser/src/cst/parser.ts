@@ -1,4 +1,4 @@
-import { TokenKind } from "./tokens";
+import { TokenKind } from "../tokens";
 import {
   AcceptData,
   AdvanceData,
@@ -9,7 +9,7 @@ import {
   Token,
   TriviaData,
   trivia_types,
-} from "./types";
+} from "../types";
 
 export class RGPUParser {
   // token stream from lexer

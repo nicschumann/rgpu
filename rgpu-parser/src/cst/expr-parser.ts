@@ -1,5 +1,5 @@
 import { RGPUParser } from "./parser";
-import { TokenKind } from "./tokens";
+import { TokenKind } from "../tokens";
 import {
   SimplifiedSyntax,
   Syntax,
@@ -12,7 +12,7 @@ import {
   isSyntaxLeaf,
   isSyntaxNode,
   SyntaxNode,
-} from "./types";
+} from "../types";
 
 export function serialize_nodes(syntax: Syntax | null): string {
   if (syntax == null) {

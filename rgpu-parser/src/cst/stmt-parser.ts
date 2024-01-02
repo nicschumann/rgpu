@@ -1,14 +1,14 @@
 import { RGPUAttrParser } from "./attr-parser";
 import { RGPUExprParser } from "./expr-parser";
 import { RGPUParser } from "./parser";
-import { TokenKind } from "./tokens";
+import { TokenKind } from "../tokens";
 import {
   Syntax,
   SyntaxNode,
   assignment_op_types,
   assignment_or_expr_tokens,
   local_declaration_tokens,
-} from "./types";
+} from "../types";
 
 export class RGPUStmtParser extends RGPUParser {
   private expr_parser: RGPUExprParser;

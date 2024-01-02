@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { RPGUTokenizer } from "../src/tokenizer";
+import { RPGUTokenizer } from "../src/cst/tokenizer";
 import { TokenKind } from "../src/tokens";
 import { normalize } from "./lib";
 

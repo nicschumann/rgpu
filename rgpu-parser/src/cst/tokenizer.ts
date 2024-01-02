@@ -1,7 +1,7 @@
 // [notes](https://github.com/rust-lang/rust-analyzer/blob/master/docs/dev/syntax.md)
 
-import { TokenKind, tokenDefinitions } from "./tokens";
-import { CharPosition, TemplateList, Token } from "./types";
+import { TokenKind, tokenDefinitions } from "../tokens";
+import { CharPosition, TemplateList, Token } from "../types";
 
 type UnclosedCandidate = {
   source_position: number; // position in the source text

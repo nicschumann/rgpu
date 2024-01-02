@@ -1,7 +1,7 @@
 import { RGPUExprParser } from "./expr-parser";
 import { RGPUParser } from "./parser";
-import { TokenKind } from "./tokens";
-import { Syntax, SyntaxNode } from "./types";
+import { TokenKind } from "../tokens";
+import { Syntax, SyntaxNode } from "../types";
 
 // const zero_arg_attribute_names: Set<string> = new Set([
 //   "const",
