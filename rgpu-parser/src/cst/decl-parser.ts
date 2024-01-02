@@ -1,8 +1,8 @@
 import { RGPUAttrParser } from "./attr-parser";
 import { RGPUExprParser } from "./expr-parser";
-import { RGPUParser } from "./parser";
+import { RGPUParser } from "./base-parser";
 import { RGPUStmtParser } from "./stmt-parser";
-import { TokenKind } from "../tokens";
+import { ErrorKind, TokenKind } from "../token-defs";
 import { Syntax, SyntaxNode } from "../types";
 
 export class RGPUDeclParser extends RGPUParser {
@@ -94,7 +94,10 @@ export class RGPUDeclParser extends RGPUParser {
       const template_ident = this.template_ident();
 
       if (template_ident) decl.children.push(template_ident);
-      else decl.children.push(this.error(TokenKind.ERR_ERROR));
+      else
+        decl.children.push(
+          this.error(TokenKind.SYM_IDENTIFIER, ErrorKind.ERR_MISSING_TOKEN)
+        );
     }
 
     return this.absorb_trailing_trivia(decl);
@@ -204,7 +207,10 @@ export class RGPUDeclParser extends RGPUParser {
 
     const type = this.template_ident();
     if (type) decl.children.push(type);
-    else decl.children.push(this.error(TokenKind.ERR_ERROR));
+    else
+      decl.children.push(
+        this.error(TokenKind.SYM_IDENTIFIER, ErrorKind.ERR_MISSING_TOKEN)
+      );
 
     return this.absorb_trailing_trivia(decl);
   }
@@ -261,8 +267,8 @@ export class RGPUDeclParser extends RGPUParser {
         // two errors, one for the missing var,
         // one for the missing ident node
         decl.children.push(
-          this.error(TokenKind.ERR_ERROR),
-          this.error(TokenKind.ERR_ERROR)
+          this.error(TokenKind.KEYWORD_VAR, ErrorKind.ERR_MISSING_TOKEN),
+          this.error(TokenKind.SYM_IDENTIFIER, ErrorKind.ERR_MISSING_TOKEN)
         );
       }
 
@@ -279,7 +285,10 @@ export class RGPUDeclParser extends RGPUParser {
 
       const ident = this.optionally_typed_ident();
       if (ident) decl.children.push(ident);
-      else decl.children.push(this.error(TokenKind.ERR_ERROR));
+      else
+        decl.children.push(
+          this.error(TokenKind.SYM_IDENTIFIER, ErrorKind.ERR_MISSING_TOKEN)
+        );
 
       const { matched, node: equal_node } = this.accept(
         TokenKind.SYM_EQUAL,
@@ -300,7 +309,9 @@ export class RGPUDeclParser extends RGPUParser {
       if (decl.children.length) {
         // we parsed some attributes, but const should not have attributes.
         // mark them as errors.
-        decl.children.forEach((child) => (child.kind = TokenKind.ERR_ERROR));
+        decl.children.forEach(
+          (child) => (child.error = ErrorKind.ERR_UNEXPECTED_ATTRIBUTE)
+        );
       }
 
       if (this.check(TokenKind.KEYWORD_CONST)) {
@@ -313,7 +324,10 @@ export class RGPUDeclParser extends RGPUParser {
 
       const ident = this.optionally_typed_ident();
       if (ident) decl.children.push(ident);
-      else decl.children.push(this.error(TokenKind.ERR_ERROR));
+      else
+        decl.children.push(
+          this.error(TokenKind.SYM_IDENTIFIER, ErrorKind.ERR_MISSING_TOKEN)
+        );
 
       const { node: equal_node } = this.accept(TokenKind.SYM_EQUAL, true);
       decl.children.push(equal_node);
@@ -321,20 +335,21 @@ export class RGPUDeclParser extends RGPUParser {
       const expr = this.expr();
       decl.children.push(expr);
     } else {
+      if (this.next_token() === null) {
+        decl.children.push(this.error(TokenKind.NO_TOKEN, ErrorKind.ERR_EOF));
+      } else {
+        decl.children.push(
+          this.error(this.next_token().kind, ErrorKind.ERR_UNEXPECTED_TOKEN)
+        );
+      }
       // error case...
-      decl.children.push(this.error(TokenKind.ERR_ERROR));
     }
 
     return this.absorb_trailing_trivia(decl);
   }
 
   private param(): Syntax {
-    let param: Syntax = {
-      kind: TokenKind.AST_FUNCTION_PARAMETER,
-      children: [],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
+    let param: Syntax = this.node(TokenKind.AST_FUNCTION_PARAMETER);
 
     param = this.attributes(param, [TokenKind.SYM_IDENTIFIER]);
     param.children.push(this.optionally_typed_ident());
@@ -396,7 +411,10 @@ export class RGPUDeclParser extends RGPUParser {
         ret_type = this.attributes(ret_type, [TokenKind.SYM_IDENTIFIER]);
         const t_ident = this.template_ident();
         if (t_ident) ret_type.children.push(t_ident);
-        else ret_type.children.push(this.error(TokenKind.ERR_ERROR));
+        else
+          ret_type.children.push(
+            this.error(TokenKind.SYM_IDENTIFIER, ErrorKind.ERR_UNEXPECTED_TOKEN)
+          );
         decl.children.push(ret_type);
       }
 
@@ -413,12 +431,7 @@ export class RGPUDeclParser extends RGPUParser {
   }
 
   global_decl(): SyntaxNode {
-    let decl: SyntaxNode = {
-      kind: TokenKind.AST_GLOBAL_DECLARATION,
-      children: [],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
+    let decl = this.node(TokenKind.AST_GLOBAL_DECLARATION);
 
     decl = this.attributes(decl, [
       TokenKind.SYM_SEMICOLON,
@@ -475,7 +488,7 @@ export class RGPUDeclParser extends RGPUParser {
     }
 
     // error.
-    decl.kind = TokenKind.ERR_ERROR;
+    decl.error = ErrorKind.ERR_UNEXPECTED_TOKEN;
     return this.absorb_trailing_trivia(decl);
   }
 
@@ -486,11 +499,11 @@ export class RGPUDeclParser extends RGPUParser {
     while (this.next_token()) {
       const decl = this.global_decl();
 
-      if (decl.kind === TokenKind.ERR_ERROR) {
+      if (decl.error !== ErrorKind.ERR_NO_ERROR) {
         // we couldn't find a global declaration here.
         // let's try and parse a compound statement...
         let stmt = this.compound_stmt();
-        stmt.kind = TokenKind.ERR_ERROR;
+        stmt.error = ErrorKind.ERR_UNEXPECTED_STATEMENT;
 
         // advance until we find a valid token for a decl.
         // NOTE(Nic): we should do something similar in the compound_statement parser
@@ -509,17 +522,8 @@ export class RGPUDeclParser extends RGPUParser {
           ])
         );
 
-        decl.children.push({
-          kind: TokenKind.ERR_ERROR,
-          children: tokens.map((t) => ({
-            kind: t.kind,
-            text: t.text,
-            leading_trivia: [],
-            trailing_trivia: [],
-          })),
-          leading_trivia: [],
-          trailing_trivia: [],
-        });
+        stmt.trailing_trivia = tokens;
+        decl.children.push(stmt);
       }
 
       decls.push(decl);
@@ -527,6 +531,7 @@ export class RGPUDeclParser extends RGPUParser {
 
     return {
       kind: TokenKind.AST_TRANSLATION_UNIT,
+      error: ErrorKind.ERR_NO_ERROR,
       children: decls,
       leading_trivia: [],
       trailing_trivia: [],

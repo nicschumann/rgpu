@@ -1,7 +1,7 @@
 import { RGPUAttrParser } from "./attr-parser";
 import { RGPUExprParser } from "./expr-parser";
-import { RGPUParser } from "./parser";
-import { TokenKind } from "../tokens";
+import { RGPUParser } from "./base-parser";
+import { ErrorKind, TokenKind } from "../token-defs";
 import {
   Syntax,
   SyntaxNode,
@@ -88,7 +88,10 @@ export class RGPUStmtParser extends RGPUParser {
       const template_ident = this.template_ident();
 
       if (template_ident) decl.children.push(template_ident);
-      else decl.children.push(this.error(TokenKind.ERR_ERROR));
+      else
+        decl.children.push(
+          this.error(TokenKind.SYM_IDENTIFIER, ErrorKind.ERR_MISSING_TOKEN)
+        );
     }
 
     return this.absorb_trailing_trivia(decl);
@@ -110,7 +113,10 @@ export class RGPUStmtParser extends RGPUParser {
 
       const ident = this.optionally_typed_ident();
       if (ident) decl.children.push(ident);
-      else decl.children.push(this.error(TokenKind.ERR_ERROR));
+      else
+        decl.children.push(
+          this.error(TokenKind.SYM_IDENTIFIER, ErrorKind.ERR_MISSING_TOKEN)
+        );
 
       const { matched, node } = this.accept(TokenKind.SYM_EQUAL, true);
       if (matched) decl.children.push(node, this.expr());
@@ -150,12 +156,7 @@ export class RGPUStmtParser extends RGPUParser {
     );
     if (!ca_matched) return null;
 
-    const decl: Syntax = {
-      kind: TokenKind.AST_CONST_ASSERT,
-      children: [ca_node],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
+    const decl = this.node(TokenKind.AST_CONST_ASSERT, [ca_node]);
 
     const expr = this.expr();
     decl.children.push(expr);
@@ -191,15 +192,7 @@ export class RGPUStmtParser extends RGPUParser {
         // this is an assignment
         stmt.kind = TokenKind.AST_UPDATING_ASSIGNMENT_STATEMENT;
         const { current, trivia } = this.advance();
-        stmt.children.push(
-          {
-            kind: current.kind,
-            text: current.text,
-            leading_trivia: trivia,
-            trailing_trivia: [],
-          },
-          this.expr()
-        );
+        stmt.children.push(this.leaf(current, trivia), this.expr());
       } else if (
         this.check(TokenKind.SYM_DASH_DASH) ||
         this.check(TokenKind.SYM_PLUS_PLUS)
@@ -207,12 +200,7 @@ export class RGPUStmtParser extends RGPUParser {
         stmt.kind = TokenKind.AST_UPDATING_ASSIGNMENT_STATEMENT;
 
         const { current, trivia } = this.advance();
-        stmt.children.push({
-          kind: current.kind,
-          text: current.text,
-          leading_trivia: trivia,
-          trailing_trivia: [],
-        });
+        stmt.children.push(this.leaf(current, trivia));
       } else {
         stmt.kind = TokenKind.AST_FUNCTION_CALL_STATEMENT;
       }
@@ -226,6 +214,7 @@ export class RGPUStmtParser extends RGPUParser {
   single_stmt(): Syntax {
     let stmt: SyntaxNode = {
       kind: TokenKind.AST_STATEMENT,
+      error: ErrorKind.ERR_NO_ERROR,
       children: [],
       leading_trivia: [],
       trailing_trivia: [],
@@ -291,12 +280,11 @@ export class RGPUStmtParser extends RGPUParser {
       stmt.kind = TokenKind.AST_CONDITIONAL_STATEMENT;
 
       const { node: if_node } = this.accept(TokenKind.KEYWORD_IF, true);
-      const if_branch: Syntax = {
-        kind: TokenKind.AST_IF_BRANCH,
-        children: [if_node, this.expr(), this.compound_stmt()],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      const if_branch = this.node(TokenKind.AST_IF_BRANCH, [
+        if_node,
+        this.expr(),
+        this.compound_stmt(),
+      ]);
 
       stmt.children.push(if_branch);
 
@@ -309,21 +297,20 @@ export class RGPUStmtParser extends RGPUParser {
 
         if (if_matched) {
           // handle an else if condition...
-          const else_if_branch: Syntax = {
-            kind: TokenKind.AST_ELSE_IF_BRANCH,
-            children: [else_node, if_node, this.expr(), this.compound_stmt()],
-            leading_trivia: [],
-            trailing_trivia: [],
-          };
+          const else_if_branch = this.node(TokenKind.AST_ELSE_IF_BRANCH, [
+            else_node,
+            if_node,
+            this.expr(),
+            this.compound_stmt(),
+          ]);
+
           stmt.children.push(else_if_branch);
         } else {
           // handle a pure else condition
-          const else_branch: Syntax = {
-            kind: TokenKind.AST_ELSE_BRANCH,
-            children: [else_node, this.compound_stmt()],
-            leading_trivia: [],
-            trailing_trivia: [],
-          };
+          const else_branch = this.node(TokenKind.AST_ELSE_BRANCH, [
+            else_node,
+            this.compound_stmt(),
+          ]);
 
           stmt.children.push(else_branch);
         }
@@ -352,19 +339,11 @@ export class RGPUStmtParser extends RGPUParser {
         if (this.check(TokenKind.KEYWORD_CASE)) {
           const { node: case_node } = this.accept(TokenKind.KEYWORD_CASE, true);
 
-          let case_statement: Syntax = {
-            kind: TokenKind.AST_SWITCH_DEFAULT,
-            children: [case_node],
-            leading_trivia: [],
-            trailing_trivia: [],
-          };
+          let case_statement = this.node(TokenKind.AST_SWITCH_DEFAULT, [
+            case_node,
+          ]);
 
-          let case_condition: Syntax = {
-            kind: TokenKind.AST_SWITCH_CASE_CONDITION,
-            children: [],
-            leading_trivia: [],
-            trailing_trivia: [],
-          };
+          let case_condition = this.node(TokenKind.AST_SWITCH_CASE_CONDITION);
 
           // maybe parse first clause
           let { matched: def_matched, node: def_node } = this.accept(
@@ -414,12 +393,9 @@ export class RGPUStmtParser extends RGPUParser {
             true
           );
 
-          let default_stmt: Syntax = {
-            kind: TokenKind.AST_SWITCH_DEFAULT,
-            children: [def_node],
-            leading_trivia: [],
-            trailing_trivia: [],
-          };
+          let default_stmt: Syntax = this.node(TokenKind.AST_SWITCH_DEFAULT, [
+            def_node,
+          ]);
 
           if (colon_matched) default_stmt.children.push(colon_node);
 
@@ -581,12 +557,7 @@ export class RGPUStmtParser extends RGPUParser {
       const { node: lparen_node } = this.accept(TokenKind.SYM_LPAREN, true);
       stmt.children.push(lparen_node);
 
-      let for_header: Syntax = {
-        kind: TokenKind.AST_FOR_HEADER,
-        children: [],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      let for_header: Syntax = this.node(TokenKind.AST_FOR_HEADER);
 
       // for INIT
       if (!this.check(TokenKind.SYM_SEMICOLON)) {
@@ -595,12 +566,9 @@ export class RGPUStmtParser extends RGPUParser {
           // @ts-ignore
           assignment_or_expr_tokens.has(this.next_token().kind)
         ) {
-          const assign = this.assignment_or_expr({
-            kind: TokenKind.AST_STATEMENT,
-            children: [],
-            leading_trivia: [],
-            trailing_trivia: [],
-          });
+          const assign = this.assignment_or_expr(
+            this.node(TokenKind.AST_STATEMENT)
+          );
           if (assign) for_header.children.push(assign);
         } else if (
           this.next_token() &&
@@ -631,12 +599,9 @@ export class RGPUStmtParser extends RGPUParser {
           // @ts-ignore
           assignment_or_expr_tokens.has(this.next_token().kind)
         ) {
-          const assign = this.assignment_or_expr({
-            kind: TokenKind.AST_STATEMENT,
-            children: [],
-            leading_trivia: [],
-            trailing_trivia: [],
-          });
+          const assign = this.assignment_or_expr(
+            this.node(TokenKind.AST_STATEMENT)
+          );
           if (assign) for_header.children.push(assign);
         }
       }
@@ -671,17 +636,12 @@ export class RGPUStmtParser extends RGPUParser {
       return this.absorb_trailing_trivia(stmt);
     }
 
-    stmt.kind = TokenKind.ERR_ERROR;
+    stmt.error = ErrorKind.ERR_UNEXPECTED_TOKEN;
     return this.absorb_trailing_trivia(stmt);
   }
 
   compound_stmt(): SyntaxNode {
-    let compound_stmt: Syntax = {
-      kind: TokenKind.AST_COMPOUND_STATEMENT,
-      children: [],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
+    let compound_stmt: Syntax = this.node(TokenKind.AST_COMPOUND_STATEMENT);
 
     // Try and parse attributes
     compound_stmt = this.attributes(compound_stmt, [TokenKind.SYM_LBRACE]);
@@ -701,7 +661,7 @@ export class RGPUStmtParser extends RGPUParser {
 
         // NOTE(Nic): This tries to close a compound statement
         // as soon as possible after an error... but we may not want this.
-        if (stmt.kind === TokenKind.ERR_ERROR) break;
+        if (stmt.error !== ErrorKind.ERR_NO_ERROR) break;
       }
     }
 

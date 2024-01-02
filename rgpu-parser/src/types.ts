@@ -1,13 +1,19 @@
 import {
   BinaryOperatorTokenKind,
+  ErrorKind,
   TokenKind,
   UnaryOperatorTokenKind,
-} from "./tokens";
+} from "./token-defs";
 
 export type CharPosition = {
   row: number; // which line is this character on?
   col: number; // which column is this character in?
   offset: number; // what is the offset of this character into the program as a string?
+};
+
+export type CharRange = {
+  start: CharPosition;
+  end: CharPosition;
 };
 
 export type Token = {
@@ -27,6 +33,7 @@ export type Syntax = SyntaxNode | SyntaxLeaf;
 
 export type SyntaxNode = {
   kind: TokenKind;
+  error: ErrorKind;
   children: Syntax[];
   leading_trivia: Token[];
   trailing_trivia: Token[];
@@ -36,6 +43,7 @@ export type SyntaxNode = {
 
 export type SyntaxLeaf = {
   kind: TokenKind;
+  error: ErrorKind;
   text: string;
   leading_trivia: Token[];
   trailing_trivia: Token[];

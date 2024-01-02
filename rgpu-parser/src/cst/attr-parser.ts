@@ -1,6 +1,6 @@
 import { RGPUExprParser } from "./expr-parser";
-import { RGPUParser } from "./parser";
-import { TokenKind } from "../tokens";
+import { RGPUParser } from "./base-parser";
+import { ErrorKind, TokenKind } from "../token-defs";
 import { Syntax, SyntaxNode } from "../types";
 
 // const zero_arg_attribute_names: Set<string> = new Set([
@@ -87,7 +87,7 @@ export class RGPUAttrParser extends RGPUParser {
     const terminal_set = new Set([TokenKind.SYM_AT, ...terminals]);
 
     while ((attribute = this.attribute()) !== null) {
-      if (attribute.kind === TokenKind.ERR_ERROR) {
+      if (attribute.error !== ErrorKind.ERR_NO_ERROR) {
         const consumed = this.advance_until(terminal_set);
 
         /**
@@ -97,7 +97,13 @@ export class RGPUAttrParser extends RGPUParser {
          * when the terminal set contains SYM_IDENTIFIER, or another symbol, that
          * may be part of an attribute expression...
          */
-        attribute.children.push(this.error(TokenKind.ERR_ERROR, consumed));
+        attribute.children.push(
+          this.error(
+            TokenKind.AST_ATTRIBUTE,
+            ErrorKind.ERR_BAD_ATTRIBUTE,
+            consumed
+          )
+        );
       }
       // parse 0 or more attributes
       decl.children.push(attribute);
@@ -113,12 +119,10 @@ export class RGPUAttrParser extends RGPUParser {
 
     let { current, trivia } = this.advance();
 
-    let attr: SyntaxNode = {
-      kind: TokenKind.AST_ATTRIBUTE,
-      children: [at_node, this.leaf(current, trivia)],
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
+    let attr = this.node(TokenKind.AST_ATTRIBUTE, [
+      at_node,
+      this.leaf(current, trivia),
+    ]);
 
     /**
      * NOTE(Nic): this is a much more permissive version of a
@@ -175,8 +179,8 @@ export class RGPUAttrParser extends RGPUParser {
 
     // if we got here, we didn't match a valid attribute term
     // return an error.
-    attr.kind = TokenKind.ERR_ERROR;
-    attr.children[1].kind = TokenKind.ERR_ERROR;
+    attr.error = ErrorKind.ERR_BAD_ATTRIBUTE;
+    attr.children[1].error = ErrorKind.ERR_UNEXPECTED_TOKEN;
     return this.absorb_trailing_trivia(attr);
   }
 }

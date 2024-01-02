@@ -174,9 +174,10 @@ export enum TokenKind {
 
   AST_TRANSLATION_UNIT,
 
-  // Tags for Errors
-  ERR_ERROR,
-  ERR_NONE,
+  // // Tags for Errors
+  // ERR_ERROR,
+  // ERR_NONE,
+  NO_TOKEN,
 }
 
 /**
@@ -186,6 +187,18 @@ export enum TokenKind {
 export enum ErrorKind {
   ERR_NO_ERROR,
   ERR_UNKNOWN,
+
+  ERR_BAD_ATTRIBUTE,
+  ERR_UNEXPECTED_ATTRIBUTE,
+
+  ERR_UNMATCHED_PAREN,
+  ERR_UNMATCHED_TEMPLATE_LIST,
+  ERR_UNMATCHED_BRACKET,
+
+  ERR_UNEXPECTED_TOKEN,
+  ERR_MISSING_TOKEN,
+  ERR_UNEXPECTED_STATEMENT,
+  ERR_EOF,
 }
 
 export type UnaryOperatorTokenKind =

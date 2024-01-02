@@ -1,5 +1,5 @@
-import { RGPUParser } from "./parser";
-import { TokenKind } from "../tokens";
+import { RGPUParser } from "./base-parser";
+import { ErrorKind, TokenKind } from "../token-defs";
 import {
   SimplifiedSyntax,
   Syntax,
@@ -35,8 +35,7 @@ export function serialize_nodes(syntax: Syntax | null): string {
 export function simplify_cst(syntax: Syntax): SimplifiedSyntax {
   const pre = syntax.leading_trivia.map((v) => v.text).join("");
   const post = syntax.trailing_trivia.map((v) => v.text).join("");
-  const is_error =
-    syntax.kind === TokenKind.ERR_ERROR || syntax.kind === TokenKind.ERR_NONE;
+  const is_error = syntax.error !== ErrorKind.ERR_NO_ERROR;
 
   if (isSyntaxLeaf(syntax)) {
     const node: SimplifiedSyntax = {
@@ -68,7 +67,8 @@ export class RGPUExprParser extends RGPUParser {
     expr: Syntax,
     kind: TokenKind,
     l_node: Syntax,
-    r_node: Syntax
+    r_node: Syntax,
+    error: ErrorKind = ErrorKind.ERR_NO_ERROR
   ): SyntaxNode {
     if (isSyntaxNode(expr)) {
       // node
@@ -81,6 +81,7 @@ export class RGPUExprParser extends RGPUParser {
       // token
       return {
         kind,
+        error,
         children: [l_node, expr, r_node],
         leading_trivia: [],
         trailing_trivia: [],
@@ -93,12 +94,7 @@ export class RGPUExprParser extends RGPUParser {
     if (!token) {
       // missing token in the stream /
       // premature end of stream
-      return {
-        kind: TokenKind.ERR_ERROR,
-        text: "",
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      return this.error(TokenKind.NO_TOKEN, ErrorKind.ERR_EOF);
     }
 
     // IDENTIFIERs && Literal Types
@@ -106,59 +102,39 @@ export class RGPUExprParser extends RGPUParser {
       token.kind === TokenKind.SYM_IDENTIFIER ||
       literal_types.has(token.kind)
     ) {
-      return {
-        kind: token.kind,
-        text: token.text,
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      return this.leaf(token);
     }
 
     if (unary_op_types.has(token.kind)) {
-      const operator: Syntax = {
-        kind: token.kind,
-        text: token.text,
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      const operator: Syntax = this.leaf(token);
       const expr = this.expr(unary_op_precedence[token.kind]);
-      return {
-        kind: token.kind,
-        children: [operator, expr],
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
+      return this.node(token.kind, [operator, expr]);
     }
 
     // PARENS in Arithmetic Expressions
     if (token.kind === TokenKind.SYM_LPAREN) {
-      const l_node: Syntax = {
-        kind: token.kind,
-        text: token.text,
-        leading_trivia: [],
-        trailing_trivia: [],
-      };
-
+      const l_node = this.leaf(token);
       const expr = this.expr();
       const { matched, node: r_node } = this.accept(
         TokenKind.SYM_RPAREN,
         false
       );
-      const kind = matched ? expr.kind : TokenKind.ERR_ERROR;
+
       // handles the case where the paren is unmatched...
-      return this.finish_block(expr, kind, l_node, r_node);
+      return this.finish_block(
+        expr,
+        expr.kind,
+        l_node,
+        r_node,
+        matched ? ErrorKind.ERR_NO_ERROR : ErrorKind.ERR_UNMATCHED_PAREN
+      );
     }
 
     // Unrecognized token in expression
     // we need to put the token back
     this.retreat();
 
-    return {
-      kind: TokenKind.ERR_ERROR,
-      text: "",
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
+    return this.error(token.kind, ErrorKind.ERR_UNEXPECTED_TOKEN);
   }
 
   parse_call_expression(
@@ -167,10 +143,11 @@ export class RGPUExprParser extends RGPUParser {
     closing_token_kind: TokenKind,
     call_kind: TokenKind,
     arg_list_kind: TokenKind,
-    error_kind: TokenKind
+    error_kind: ErrorKind
   ): SyntaxNode {
     let args: SyntaxNode = {
       kind: arg_list_kind,
+      error: ErrorKind.ERR_NO_ERROR,
       children: [],
       leading_trivia: [],
       trailing_trivia: [],
@@ -196,22 +173,19 @@ export class RGPUExprParser extends RGPUParser {
       }
     }
 
-    const l_node: Syntax = {
-      kind: token.kind,
-      text: token.text,
-      leading_trivia: [],
-      trailing_trivia: [],
-    };
+    const l_node = this.leaf(token);
     const { matched, node: r_node } = this.accept(closing_token_kind, true);
     args = this.finish_block(
       args,
-      matched ? args.kind : error_kind,
+      args.kind,
       l_node,
-      r_node
+      r_node,
+      matched ? ErrorKind.ERR_NO_ERROR : error_kind
     );
 
     return {
       kind: call_kind,
+      error: ErrorKind.ERR_NO_ERROR,
       children: [left, args],
       leading_trivia: [],
       trailing_trivia: [],
@@ -234,7 +208,7 @@ export class RGPUExprParser extends RGPUParser {
         TokenKind.SYM_RPAREN,
         TokenKind.AST_FUNCTION_CALL,
         TokenKind.AST_FUNCTION_ARGS,
-        TokenKind.ERR_ERROR
+        ErrorKind.ERR_UNMATCHED_PAREN
       );
     }
 
@@ -246,7 +220,7 @@ export class RGPUExprParser extends RGPUParser {
         TokenKind.SYM_TEMPLATE_LIST_END,
         TokenKind.AST_TEMPLATE_IDENTIFIER,
         TokenKind.AST_TEMPLATE_ARGS,
-        TokenKind.ERR_ERROR
+        ErrorKind.ERR_UNMATCHED_TEMPLATE_LIST
       );
     }
 
@@ -258,14 +232,14 @@ export class RGPUExprParser extends RGPUParser {
         TokenKind.SYM_RBRACKET,
         TokenKind.AST_ARRAY_ACCESS,
         TokenKind.AST_ARRAY_INDEX,
-        TokenKind.ERR_ERROR
+        ErrorKind.ERR_UNMATCHED_BRACKET
       );
     }
 
-    return this.node(TokenKind.ERR_ERROR, [
+    return this.node(token.kind, [
       left,
       this.leaf(token),
-      this.error(TokenKind.ERR_ERROR),
+      this.error(token.kind, ErrorKind.ERR_UNEXPECTED_TOKEN),
     ]);
   }
 
@@ -287,7 +261,10 @@ export class RGPUExprParser extends RGPUParser {
       return null;
     }
 
-    let left: Syntax = this.error(TokenKind.SYM_DISAMBIGUATE_TEMPLATE);
+    let left: Syntax = this.error(
+      TokenKind.SYM_DISAMBIGUATE_TEMPLATE,
+      ErrorKind.ERR_NO_ERROR
+    );
 
     const { current: template_start_token, trivia: leading_trivia } =
       this.advance();
@@ -301,6 +278,7 @@ export class RGPUExprParser extends RGPUParser {
   lhs(): Syntax {
     const lhs: Syntax = {
       kind: TokenKind.AST_LHS_EXPRESSION,
+      error: ErrorKind.ERR_NO_ERROR,
       children: [],
       leading_trivia: [],
       trailing_trivia: [],
@@ -332,7 +310,9 @@ export class RGPUExprParser extends RGPUParser {
     if (ident) {
       lhs.children.push(ident);
     } else {
-      lhs.children.push(this.error(TokenKind.ERR_ERROR));
+      lhs.children.push(
+        this.error(TokenKind.SYM_IDENTIFIER, ErrorKind.ERR_MISSING_TOKEN)
+      );
     }
 
     const maybe_specifier = this.component_specifier();
@@ -350,6 +330,7 @@ export class RGPUExprParser extends RGPUParser {
     // https://www.w3.org/TR/WGSL/#syntax-component_or_swizzle_specifier
     const spec_node: Syntax = {
       kind: TokenKind.AST_LHS_COMPONENT_SPECIFIER,
+      error: ErrorKind.ERR_NO_ERROR,
       children: [],
       leading_trivia: [],
       trailing_trivia: [],

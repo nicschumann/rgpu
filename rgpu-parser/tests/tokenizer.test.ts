@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { RPGUTokenizer } from "../src/cst/tokenizer";
-import { TokenKind } from "../src/tokens";
+import { TokenKind } from "../src/token-defs";
 import { normalize } from "./lib";
 
 describe("RGPU Tokenizer", () => {

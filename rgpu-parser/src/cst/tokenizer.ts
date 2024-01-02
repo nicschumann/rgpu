@@ -1,6 +1,6 @@
 // [notes](https://github.com/rust-lang/rust-analyzer/blob/master/docs/dev/syntax.md)
 
-import { TokenKind, tokenDefinitions } from "../tokens";
+import { TokenKind, tokenDefinitions } from "../token-defs";
 import { CharPosition, TemplateList, Token } from "../types";
 
 type UnclosedCandidate = {

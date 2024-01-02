@@ -1,4 +1,4 @@
-import { TokenKind } from "../tokens";
+import { ErrorKind, TokenKind } from "../token-defs";
 import {
   AcceptData,
   AdvanceData,
@@ -58,7 +58,7 @@ export class RGPUParser {
   protected accept(
     kind: TokenKind,
     allows_trivia: boolean = false,
-    error_kind: TokenKind = TokenKind.ERR_ERROR
+    error_kind: ErrorKind = ErrorKind.ERR_UNKNOWN
   ): AcceptData {
     if (this.check(kind)) {
       let { current, trivia } = this.advance();
@@ -77,7 +77,7 @@ export class RGPUParser {
     } else {
       return {
         matched: false,
-        node: this.error(error_kind),
+        node: this.error(kind, error_kind),
       };
     }
   }
@@ -184,10 +184,12 @@ export class RGPUParser {
     kind: TokenKind,
     children: Syntax[] = [],
     leading_trivia?: Token[],
-    trailing_trivia?: Token[]
+    trailing_trivia?: Token[],
+    error?: ErrorKind
   ): SyntaxNode {
     return {
       kind,
+      error: error || ErrorKind.ERR_NO_ERROR,
       children: children,
       leading_trivia: leading_trivia || [],
       trailing_trivia: trailing_trivia || [],
@@ -197,10 +199,12 @@ export class RGPUParser {
   protected leaf(
     from: Token,
     leading_trivia?: Token[],
-    trailing_trivia?: Token[]
+    trailing_trivia?: Token[],
+    error?: ErrorKind
   ): SyntaxLeaf {
     return {
       kind: from.kind,
+      error: error || ErrorKind.ERR_NO_ERROR,
       text: from.text,
       leading_trivia: leading_trivia || [],
       trailing_trivia: trailing_trivia || [],
@@ -211,11 +215,13 @@ export class RGPUParser {
 
   protected error(
     kind: TokenKind,
+    error: ErrorKind,
     leading_trivia?: Token[],
     trailing_trivia?: Token[]
   ): SyntaxLeaf {
     return {
       kind,
+      error,
       text: "",
       leading_trivia: leading_trivia || [],
       trailing_trivia: trailing_trivia || [],
