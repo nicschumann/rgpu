@@ -487,9 +487,9 @@ export class RGPUDeclParser extends RGPUParser {
       return this.absorb_trailing_trivia(decl);
     }
 
-    // error.
+    // NOTE(Nic): error, don't absorb trailing trivia
     decl.error = ErrorKind.ERR_UNEXPECTED_TOKEN;
-    return this.absorb_trailing_trivia(decl);
+    return decl;
   }
 
   translation_unit(): Syntax {
@@ -504,7 +504,6 @@ export class RGPUDeclParser extends RGPUParser {
         // let's try and parse a compound statement...
         let stmt = this.compound_stmt();
         stmt.error = ErrorKind.ERR_UNEXPECTED_STATEMENT;
-        stmt.children.unshift(decl);
 
         // advance until we find a valid token for a decl.
         // NOTE(Nic): we should do something similar in the compound_statement parser
@@ -523,8 +522,8 @@ export class RGPUDeclParser extends RGPUParser {
           ])
         );
 
-        stmt.trailing_trivia = tokens;
-        decl = stmt;
+        stmt.trailing_trivia.push(...tokens);
+        decl.children.push(stmt);
       }
 
       decls.push(decl);

@@ -134,7 +134,7 @@ describe("RGPU Range Elaboration", () => {
       elaborate_ranges(cst);
 
       // console.log(JSON.stringify(cst, null, 4));
-      console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
       // console.log(parser.remaining());
 
       const valid_structure = check_range_structure(cst);
@@ -143,6 +143,9 @@ describe("RGPU Range Elaboration", () => {
         testcase,
         testcase_lines
       );
+
+      // NOTE(Nic): add a testcase to check that the reported range
+      // covers the entire program text.
 
       expect(valid_structure).to.be.true;
       expect(valid_ranges).to.be.true;
