@@ -1,5 +1,3 @@
-import * as fs from "fs";
-import * as path from "path";
 import { expect } from "chai";
 import { RPGUTokenizer, serialize_tokens } from "../src/cst/tokenizer";
 import { serialize_nodes, simplify_cst } from "../src/cst/expr-parser";
@@ -117,8 +115,10 @@ describe("RGPU Range Elaboration", () => {
     const testcases = [
       "var a = 10; var b = 1000f;",
       "@work(0,1 @binding(0) var<uniform, read> a : array<f32, 2> = a + b",
-      "fn main( { a",
+      "a = 1; fn main( { a; var a : i32 = 10;",
+      " a = 1; fn main",
       "var<storage> a: i32; for (let a = (a + b); a <; a += ) { let a = 1",
+      " a + 2",
     ];
 
     testcases.forEach((testcase) => {
@@ -128,15 +128,13 @@ describe("RGPU Range Elaboration", () => {
 
       const tokens = lexer.tokenize_source(testcase);
 
-      // if you need to debug token stream...
-      // console.log(tokens);
       parser.reset(tokens);
       const cst = parser.translation_unit();
 
       elaborate_ranges(cst);
 
       // console.log(JSON.stringify(cst, null, 4));
-      // console.log(JSON.stringify(simplify_cst(cst), null, 4));
+      console.log(JSON.stringify(simplify_cst(cst), null, 4));
       // console.log(parser.remaining());
 
       const valid_structure = check_range_structure(cst);

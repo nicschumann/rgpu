@@ -497,13 +497,14 @@ export class RGPUDeclParser extends RGPUParser {
     const decls: Syntax[] = [];
 
     while (this.next_token()) {
-      const decl = this.global_decl();
+      let decl = this.global_decl();
 
       if (decl.error !== ErrorKind.ERR_NO_ERROR) {
         // we couldn't find a global declaration here.
         // let's try and parse a compound statement...
         let stmt = this.compound_stmt();
         stmt.error = ErrorKind.ERR_UNEXPECTED_STATEMENT;
+        stmt.children.unshift(decl);
 
         // advance until we find a valid token for a decl.
         // NOTE(Nic): we should do something similar in the compound_statement parser
@@ -523,7 +524,7 @@ export class RGPUDeclParser extends RGPUParser {
         );
 
         stmt.trailing_trivia = tokens;
-        decl.children.push(stmt);
+        decl = stmt;
       }
 
       decls.push(decl);
