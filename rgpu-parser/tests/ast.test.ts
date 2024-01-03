@@ -17,9 +17,9 @@ describe("RGPU Abstract Syntax Tree", () => {
     const parser = new RGPUDeclParser();
     const checker = new RGPUTypechecker();
 
-    const testcases = ["@attribute @syntax const<storage> a:i32 = a;"];
+    const testcases = ["@attribute @syntax var a:i32 = b"];
 
-    testcases.forEach((testcase) => {
+    testcases.forEach((testcase, i) => {
       const tokens = lexer.tokenize_source(testcase);
 
       // if you need to debug token stream...
@@ -34,7 +34,7 @@ describe("RGPU Abstract Syntax Tree", () => {
 
       const table = checker.check(cst);
 
-      console.log(table);
+      if (i === testcases.length - 1) console.log(table);
 
       // const serialized = serialize_nodes(cst);
 

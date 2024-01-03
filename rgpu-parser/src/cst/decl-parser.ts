@@ -257,6 +257,12 @@ export class RGPUDeclParser extends RGPUParser {
       decl.kind = TokenKind.AST_GLOBAL_VAR_DECLARATION;
     }
 
+    /**
+     * NOTE(Nic): I am diverging from the spec here to make the parsing
+     * a bit more robust. keyword_const does not accept attributes infront
+     * of it, but I will parse them anyway, and then mark those nodes as errors
+     * if they are present.
+     */
     if (
       this.check(TokenKind.KEYWORD_VAR) ||
       this.check(TokenKind.KEYWORD_OVERRIDE) ||
@@ -274,22 +280,14 @@ export class RGPUDeclParser extends RGPUParser {
           ])
         );
       } else {
-        decl.children.push(this.leaf(current, trivia));
+        decl.children.push(
+          this.node(TokenKind.AST_BARE_DECLARATION, [
+            this.leaf(current, trivia),
+          ])
+        );
       }
 
-      const ident = this.optionally_typed_ident();
-      decl.children.push(ident);
-
-      // if (var_decl) {
-      //   decl.children.push(...var_decl.children);
-      // } else {
-      //   // two errors, one for the missing var,
-      //   // one for the missing ident node
-      //   decl.children.push(
-      //     this.error(TokenKind.KEYWORD_VAR, ErrorKind.ERR_MISSING_TOKEN),
-      //     this.error(TokenKind.SYM_IDENTIFIER, ErrorKind.ERR_MISSING_TOKEN)
-      //   );
-      // }
+      decl.children.push(this.optionally_typed_ident());
 
       const { matched, node } = this.accept(TokenKind.SYM_EQUAL, true);
 
@@ -310,102 +308,6 @@ export class RGPUDeclParser extends RGPUParser {
 
       return decl;
     }
-
-    /**
-     * NOTE(Nic): I am diverging from the spec here to make the parsing
-     * a bit more robust. keyword_const does not accept attributes infront
-     * of it, but I will parse them anyway, and then mark those nodes as errors
-     * if they are present.
-     */
-
-    if (this.check(TokenKind.KEYWORD_VAR)) {
-      const var_decl = this.var_decl();
-
-      if (var_decl) {
-        decl.children.push(...var_decl.children);
-      } else {
-        // two errors, one for the missing var,
-        // one for the missing ident node
-        decl.children.push(
-          this.error(TokenKind.KEYWORD_VAR, ErrorKind.ERR_MISSING_TOKEN),
-          this.error(TokenKind.SYM_IDENTIFIER, ErrorKind.ERR_MISSING_TOKEN)
-        );
-      }
-
-      const { matched, node } = this.accept(TokenKind.SYM_EQUAL, true);
-
-      if (matched) {
-        decl.children.push(node);
-        const expr = this.expr();
-        decl.children.push(expr);
-      }
-    } else if (this.check(TokenKind.KEYWORD_OVERRIDE)) {
-      const { node } = this.accept(TokenKind.KEYWORD_OVERRIDE, true);
-      decl.children.push(node);
-
-      const ident = this.optionally_typed_ident();
-      if (ident) decl.children.push(ident);
-      else
-        decl.children.push(
-          this.error(TokenKind.SYM_IDENTIFIER, ErrorKind.ERR_MISSING_TOKEN)
-        );
-
-      const { matched, node: equal_node } = this.accept(
-        TokenKind.SYM_EQUAL,
-        true
-      );
-
-      if (matched) {
-        decl.children.push(equal_node);
-        const expr = this.expr();
-        decl.children.push(expr);
-      }
-
-      return this.absorb_trailing_trivia(decl);
-    } else if (
-      this.check(TokenKind.KEYWORD_CONST) ||
-      this.check(TokenKind.KEYWORD_LET)
-    ) {
-      if (decl.children.length) {
-        // we parsed some attributes, but const should not have attributes.
-        // mark them as errors.
-        decl.children.forEach(
-          (child) => (child.error = ErrorKind.ERR_UNEXPECTED_ATTRIBUTE)
-        );
-      }
-
-      if (this.check(TokenKind.KEYWORD_CONST)) {
-        const { node } = this.accept(TokenKind.KEYWORD_CONST, true);
-        decl.children.push(node);
-      } else {
-        const { node } = this.accept(TokenKind.KEYWORD_LET, true);
-        decl.children.push(node);
-      }
-
-      const ident = this.optionally_typed_ident();
-      if (ident) decl.children.push(ident);
-      else
-        decl.children.push(
-          this.error(TokenKind.SYM_IDENTIFIER, ErrorKind.ERR_MISSING_TOKEN)
-        );
-
-      const { node: equal_node } = this.accept(TokenKind.SYM_EQUAL, true);
-      decl.children.push(equal_node);
-
-      const expr = this.expr();
-      decl.children.push(expr);
-    } else {
-      if (this.next_token() === null) {
-        decl.children.push(this.error(TokenKind.NO_TOKEN, ErrorKind.ERR_EOF));
-      } else {
-        decl.children.push(
-          this.error(this.next_token().kind, ErrorKind.ERR_UNEXPECTED_TOKEN)
-        );
-      }
-      // error case...
-    }
-
-    return this.absorb_trailing_trivia(decl);
   }
 
   private param(): Syntax {
