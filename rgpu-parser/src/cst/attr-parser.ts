@@ -181,6 +181,6 @@ export class RGPUAttrParser extends RGPUParser {
     // return an error.
     attr.error = ErrorKind.ERR_BAD_ATTRIBUTE;
     attr.children[1].error = ErrorKind.ERR_UNEXPECTED_TOKEN;
-    return this.absorb_trailing_trivia(attr);
+    return attr;
   }
 }

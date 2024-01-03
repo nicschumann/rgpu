@@ -637,7 +637,7 @@ export class RGPUStmtParser extends RGPUParser {
     }
 
     stmt.error = ErrorKind.ERR_UNEXPECTED_TOKEN;
-    return this.absorb_trailing_trivia(stmt);
+    return stmt;
   }
 
   compound_stmt(): SyntaxNode {
