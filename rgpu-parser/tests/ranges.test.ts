@@ -1,10 +1,10 @@
 import { expect } from "chai";
-import { RPGUTokenizer, serialize_tokens } from "../src/cst/tokenizer";
-import { serialize_nodes, simplify_cst } from "../src/cst/expr-parser";
+import { RPGUTokenizer } from "../src/cst/tokenizer";
 import { RGPUDeclParser } from "../src/cst/decl-parser";
 import { elaborate_ranges } from "../src/ast/build-ast";
 import { Syntax, isSyntaxLeaf, isSyntaxNode } from "../src/types";
 import { ErrorKind } from "../src/token-defs";
+import { serialize_nodes } from "../src/cst/utils";
 
 const check_range_structure = (syntax: Syntax): boolean => {
   if (isSyntaxNode(syntax)) {

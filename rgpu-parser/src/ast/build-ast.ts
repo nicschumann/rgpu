@@ -53,23 +53,23 @@ function range_extents(range: CharRange[], children: Syntax[]): CharRange {
 
     // // STEP 3: Fill in any missing internal ranges...
     // // scan the middle to make sure we don't have any undefined interior starts
-    // k = i + 1;
-    // let last_i = i;
-    // while (k < j) {
-    //   // j is the last defined index...
-    //   if (range[k].start === null) children[k].start = children[last_i].end;
-    //   else last_i = k;
-    //   k++;
-    // }
+    k = i + 1;
+    let last_i = i;
+    while (k < j) {
+      // j is the last defined index...
+      if (range[k].start === null) children[k].start = children[last_i].end;
+      else last_i = k;
+      k++;
+    }
 
     // // // scan the middle to make sure we don't have any undefined interior ends
-    // k = j - 1;
-    // let last_j = j;
-    // while (k > i) {
-    //   if (range[k].end === null) children[k].end = children[last_j].start;
-    //   else last_j = k;
-    //   k--;
-    // }
+    k = j - 1;
+    let last_j = j;
+    while (k > i) {
+      if (range[k].end === null) children[k].end = children[last_j].start;
+      else last_j = k;
+      k--;
+    }
   }
 
   return { start, end };

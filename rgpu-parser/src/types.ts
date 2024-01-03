@@ -63,12 +63,14 @@ export type SimplifiedSyntax =
   | {
       text?: string;
       error?: boolean;
+      range?: string;
     }
   | {
-      pre: string;
-      post: string;
       children: SimplifiedSyntax[];
+      pre?: string;
+      post?: string;
       error?: boolean;
+      range?: string;
     };
 
 export type AdvanceData = {

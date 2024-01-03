@@ -1,10 +1,7 @@
 import { expect } from "chai";
-import { RPGUTokenizer, serialize_tokens } from "../src/cst/tokenizer";
-import {
-  RGPUExprParser,
-  serialize_nodes,
-  simplify_cst,
-} from "../src/cst/expr-parser";
+import { RPGUTokenizer } from "../src/cst/tokenizer";
+import { RGPUExprParser } from "../src/cst/expr-parser";
+import { serialize_nodes, serialize_tokens } from "../src/cst/utils";
 
 describe("RGPU Expression Parser", () => {
   it("should parse unary operators", () => {
