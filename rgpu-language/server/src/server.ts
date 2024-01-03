@@ -16,6 +16,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   RGPUDeclParser,
+  RGPUTypechecker,
   RPGUTokenizer,
   elaborate_ranges,
   serialize_nodes,
@@ -147,24 +148,44 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 
   const tokenizer = new RPGUTokenizer();
   const parser = new RGPUDeclParser();
+  const checker = new RGPUTypechecker();
 
   const t_s = performance.now();
   const tokens = tokenizer.tokenize_source(text);
   parser.reset(tokens);
   const tree = parser.translation_unit();
   elaborate_ranges(tree);
+  const { errors } = checker.check(tree);
   const t_e = performance.now();
 
+  const process_time = `throughput: ${Math.floor(
+    tokens.length / ((t_e - t_s) / 1000)
+  ).toLocaleString("en-US")}\nactual: ${tokens.length} tokens, ${(
+    t_e - t_s
+  ).toFixed(4)} ms`;
+
   if (isSyntaxNode(tree) && tree.children.length > 0) {
-    const labelled = tree.children[0];
+    errors.forEach((error) => {
+      const message = `${error.desc}`;
+      diagnostics.push({
+        severity: DiagnosticSeverity.Warning,
+        range: {
+          start: textDocument.positionAt(error.range.start.offset),
+          end: textDocument.positionAt(error.range.end.offset),
+        },
+        message,
+        source: "rgpu",
+      });
+    });
+
     diagnostics.push({
+      severity: DiagnosticSeverity.Information,
       range: {
-        start: textDocument.positionAt(labelled.start?.offset),
-        end: textDocument.positionAt(labelled.end?.offset),
+        start: textDocument.positionAt(tree.start.offset),
+        end: textDocument.positionAt(tree.end.offset),
       },
-      message: `throughput: ${tokens.length / ((t_e - t_s) / 1000)}\nactual: ${
-        tokens.length
-      } tokens, ${(t_e - t_s).toFixed(4)} ms`,
+      message: process_time,
+      source: "rgpu",
     });
   }
 
