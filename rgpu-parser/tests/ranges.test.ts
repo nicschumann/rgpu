@@ -113,6 +113,7 @@ describe("RGPU Range Elaboration", () => {
     const parser = new RGPUDeclParser();
 
     const testcases = [
+      "@",
       "var a = 10; var b = 1000f;",
       "@work(0,1 @binding(0) var<uniform, read> a : array<f32, 2> = a + b",
       "a = 1; fn main( { a; var a : i32 = 10;",
@@ -130,6 +131,7 @@ describe("RGPU Range Elaboration", () => {
 
       parser.reset(tokens);
       const cst = parser.translation_unit();
+      console.log(tokens, cst);
 
       elaborate_ranges(cst);
 

@@ -117,12 +117,7 @@ export class RGPUAttrParser extends RGPUParser {
 
     if (!matched) return null;
 
-    let { current, trivia } = this.advance();
-
-    let attr = this.node(TokenKind.AST_ATTRIBUTE, [
-      at_node,
-      this.leaf(current, trivia),
-    ]);
+    let attr = this.node(TokenKind.AST_ATTRIBUTE, [at_node]);
 
     /**
      * NOTE(Nic): this is a much more permissive version of a
@@ -132,10 +127,12 @@ export class RGPUAttrParser extends RGPUParser {
      * attributes are actually correct and meaningful.
      */
     if (
-      current.kind === TokenKind.KEYWORD_CONST ||
-      current.kind === TokenKind.KEYWORD_DIAGNOSTIC ||
-      current.kind === TokenKind.SYM_IDENTIFIER
+      this.check(TokenKind.KEYWORD_CONST) ||
+      this.check(TokenKind.KEYWORD_DIAGNOSTIC) ||
+      this.check(TokenKind.SYM_IDENTIFIER)
     ) {
+      const { current, trivia } = this.advance();
+      attr.children.push(this.leaf(current, trivia));
       // we could mark the nodes as errors here, if they don't conform to the spec.
       if (this.check(TokenKind.SYM_LPAREN)) {
         attr = this.attribute_args(attr, -1);
@@ -144,43 +141,12 @@ export class RGPUAttrParser extends RGPUParser {
       return this.absorb_trailing_trivia(attr);
     }
 
-    // if (
-    //   current.kind === TokenKind.KEYWORD_CONST ||
-    //   (current.kind === TokenKind.SYM_IDENTIFIER &&
-    //     zero_arg_attribute_names.has(current.text))
-    // ) {
-    //   return this.absorb_trailing_trivia(attr);
-    // }
-
-    // if (
-    //   current.kind === TokenKind.SYM_IDENTIFIER &&
-    //   single_arg_attribute_names.has(current.text)
-    // ) {
-    //   attr = this.attribute_args(attr, 1);
-    //   return this.absorb_trailing_trivia(attr);
-    // }
-
-    // if (
-    //   current.kind === TokenKind.KEYWORD_DIAGNOSTIC ||
-    //   (current.kind === TokenKind.SYM_IDENTIFIER &&
-    //     double_arg_attribute_names.has(current.text))
-    // ) {
-    //   attr = this.attribute_args(attr, 2);
-    //   return this.absorb_trailing_trivia(attr);
-    // }
-
-    // if (
-    //   current.kind === TokenKind.SYM_IDENTIFIER &&
-    //   triple_arg_attribute_names.has(current.text)
-    // ) {
-    //   attr = this.attribute_args(attr, 3);
-    //   return this.absorb_trailing_trivia(attr);
-    // }
-
     // if we got here, we didn't match a valid attribute term
     // return an error.
     attr.error = ErrorKind.ERR_BAD_ATTRIBUTE;
-    attr.children[1].error = ErrorKind.ERR_UNEXPECTED_TOKEN;
+    if (attr.children.length > 1)
+      attr.children[1].error = ErrorKind.ERR_UNEXPECTED_TOKEN;
+
     return attr;
   }
 }
