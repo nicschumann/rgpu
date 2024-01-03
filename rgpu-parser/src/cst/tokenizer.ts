@@ -105,7 +105,14 @@ export class RPGUTokenizer {
     while ((token = this.next_token()) !== null) {
       if (
         token.kind === TokenKind.SYM_IDENTIFIER ||
-        token.kind === TokenKind.KEYWORD_VAR
+        token.kind === TokenKind.KEYWORD_VAR ||
+        // NOTE(Nic): Again, diverging from the spec here, so that we can uniformly
+        // parse all declaration keywords. This simplifies parsing and makes it more robust for an
+        // editor context. We will mark the following cases as errors if they
+        // have templates on them.
+        token.kind === TokenKind.KEYWORD_OVERRIDE ||
+        token.kind === TokenKind.KEYWORD_LET ||
+        token.kind === TokenKind.KEYWORD_CONST
       ) {
         this.consume_token(token);
         // We need to check for template lists:

@@ -3,7 +3,7 @@ import * as path from "path";
 import { expect } from "chai";
 import { RPGUTokenizer } from "../src/cst/tokenizer";
 import { RGPUDeclParser } from "../src/cst/decl-parser";
-import { elaborate_ranges } from "../src/ast/build-ast";
+import { elaborate_ranges } from "../src/ast/build-ranges";
 import { serialize_nodes, simplify_cst } from "../src/cst/utils";
 
 const MIN_THROUGHPUT: number = 200_000;

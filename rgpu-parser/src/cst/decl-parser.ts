@@ -221,10 +221,16 @@ export class RGPUDeclParser extends RGPUParser {
 
     if (!matched) return null;
 
-    const decl: Syntax = this.node(TokenKind.AST_VAR_DECLARATION, [node]);
+    const decl: Syntax = this.node(TokenKind.AST_VAR_DECLARATION, []);
 
     let var_template = this.template();
-    if (var_template) decl.children.push(var_template);
+    if (var_template) {
+      decl.children.push(
+        this.node(TokenKind.AST_PARAMETERIZED_DECLARATION, [node, var_template])
+      );
+    } else {
+      decl.children.push(node);
+    }
 
     const ident = this.optionally_typed_ident();
     decl.children.push(ident);
@@ -249,6 +255,60 @@ export class RGPUDeclParser extends RGPUParser {
     } else {
       // else we just label it and assume attributes are parsed.
       decl.kind = TokenKind.AST_GLOBAL_VAR_DECLARATION;
+    }
+
+    if (
+      this.check(TokenKind.KEYWORD_VAR) ||
+      this.check(TokenKind.KEYWORD_OVERRIDE) ||
+      this.check(TokenKind.KEYWORD_LET) ||
+      this.check(TokenKind.KEYWORD_CONST)
+    ) {
+      let { current, trivia } = this.advance();
+
+      let var_template = this.template();
+      if (var_template) {
+        decl.children.push(
+          this.node(TokenKind.AST_PARAMETERIZED_DECLARATION, [
+            this.leaf(current, trivia),
+            var_template,
+          ])
+        );
+      } else {
+        decl.children.push(this.leaf(current, trivia));
+      }
+
+      const ident = this.optionally_typed_ident();
+      decl.children.push(ident);
+
+      // if (var_decl) {
+      //   decl.children.push(...var_decl.children);
+      // } else {
+      //   // two errors, one for the missing var,
+      //   // one for the missing ident node
+      //   decl.children.push(
+      //     this.error(TokenKind.KEYWORD_VAR, ErrorKind.ERR_MISSING_TOKEN),
+      //     this.error(TokenKind.SYM_IDENTIFIER, ErrorKind.ERR_MISSING_TOKEN)
+      //   );
+      // }
+
+      const { matched, node } = this.accept(TokenKind.SYM_EQUAL, true);
+
+      if (matched) {
+        decl.children.push(node);
+        decl.children.push(this.expr());
+      }
+
+      return this.absorb_trailing_trivia(decl);
+    } else {
+      if (this.next_token() === null) {
+        decl.children.push(this.error(TokenKind.NO_TOKEN, ErrorKind.ERR_EOF));
+      } else {
+        decl.children.push(
+          this.error(this.next_token().kind, ErrorKind.ERR_UNEXPECTED_TOKEN)
+        );
+      }
+
+      return decl;
     }
 
     /**

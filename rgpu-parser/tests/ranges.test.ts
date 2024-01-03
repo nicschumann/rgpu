@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { RPGUTokenizer } from "../src/cst/tokenizer";
 import { RGPUDeclParser } from "../src/cst/decl-parser";
-import { elaborate_ranges } from "../src/ast/build-ast";
+import { elaborate_ranges } from "../src/ast/build-ranges";
 import { Syntax, isSyntaxLeaf, isSyntaxNode } from "../src/types";
 import { ErrorKind } from "../src/token-defs";
 import { serialize_nodes } from "../src/cst/utils";
@@ -131,7 +131,7 @@ describe("RGPU Range Elaboration", () => {
 
       parser.reset(tokens);
       const cst = parser.translation_unit();
-      console.log(tokens, cst);
+      // console.log(tokens, cst);
 
       elaborate_ranges(cst);
 

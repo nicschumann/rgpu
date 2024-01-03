@@ -17,10 +17,12 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   RGPUDeclParser,
   RPGUTokenizer,
+  elaborate_ranges,
   serialize_nodes,
   simplify_cst,
 } from "rgpu-parser";
 import { Position } from "vscode";
+import { isSyntaxNode } from "rgpu-parser/src/types";
 
 const connection = createConnection(ProposedFeatures.all);
 console.log = connection.console.log.bind(connection.console);
@@ -146,17 +148,25 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
   const tokenizer = new RPGUTokenizer();
   const parser = new RGPUDeclParser();
 
+  const t_s = performance.now();
   const tokens = tokenizer.tokenize_source(text);
   parser.reset(tokens);
   const tree = parser.translation_unit();
+  elaborate_ranges(tree);
+  const t_e = performance.now();
 
-  diagnostics.push({
-    range: {
-      start: textDocument.positionAt(0),
-      end: textDocument.positionAt(1),
-    },
-    message: JSON.stringify(simplify_cst(tree), null, 4),
-  });
+  if (isSyntaxNode(tree) && tree.children.length > 0) {
+    const labelled = tree.children[0];
+    diagnostics.push({
+      range: {
+        start: textDocument.positionAt(labelled.start?.offset),
+        end: textDocument.positionAt(labelled.end?.offset),
+      },
+      message: `throughput: ${tokens.length / ((t_e - t_s) / 1000)}\nactual: ${
+        tokens.length
+      } tokens, ${(t_e - t_s).toFixed(4)} ms`,
+    });
+  }
 
   // Send the computed diagnostics to VSCode.
   connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });

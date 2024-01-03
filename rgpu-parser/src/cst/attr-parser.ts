@@ -83,6 +83,7 @@ export class RGPUAttrParser extends RGPUParser {
   }
 
   attributes(decl: SyntaxNode, terminals: TokenKind[] = []): SyntaxNode {
+    let attributes: SyntaxNode = this.node(TokenKind.AST_ATTRIBUTE_LIST);
     let attribute: SyntaxNode | null = null;
     const terminal_set = new Set([TokenKind.SYM_AT, ...terminals]);
 
@@ -106,7 +107,11 @@ export class RGPUAttrParser extends RGPUParser {
         );
       }
       // parse 0 or more attributes
-      decl.children.push(attribute);
+      attributes.children.push(attribute);
+    }
+
+    if (attributes.children.length > 0) {
+      decl.children.push(attributes);
     }
 
     return decl;
