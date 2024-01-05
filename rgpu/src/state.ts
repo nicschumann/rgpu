@@ -1,14 +1,18 @@
+import { RGPUAllocator } from "./alloc";
 import {
-  type IGPUState,
+  BufferHandle,
+  BufferParameters,
+  type IGPU,
   type RenderCallbackParameters,
   type RenderConfigOptions,
 } from "./types";
 
-export class RGPUState implements IGPUState {
+export class RGPUState implements IGPU {
   private adapter: GPUAdapter;
   private device: GPUDevice;
   private context: GPUCanvasContext;
   private canvas: HTMLCanvasElement;
+  private allocator: RGPUAllocator;
 
   private alphaMode: GPUCanvasAlphaMode = "premultiplied";
   private format: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -23,12 +27,20 @@ export class RGPUState implements IGPUState {
     this.device = device;
     this.context = context;
     this.canvas = canvas;
+    this.allocator = new RGPUAllocator();
 
     this.context.configure({
       device: this.device,
       format: this.format,
       alphaMode: this.alphaMode,
     });
+  }
+
+  buffer(input: BufferParameters) {
+    const result = this.allocator.alloc(input.data, this.device);
+    if (!result) console.log("failed to create buffer!");
+
+    return result;
   }
 
   render({ vertex, fragment }: RenderConfigOptions) {
