@@ -31,19 +31,14 @@ export default function Home() {
           usage: "vertex",
           data: {
             position: [
-              [1, 2, 3],
-              [4, 5, 6],
-              [7, 8, 9],
-            ],
-            uv: [
-              [0, 1],
-              [0, 1],
-              [0, 1],
+              [0.0, 0.5],
+              [-0.5, -0.5],
+              [0.5, -0.5],
             ],
             color: [
-              [100, 200],
-              [100, 200],
-              [100, 200],
+              [1, 1, 0, 1],
+              [0, 1, 0, 1],
+              [0, 0, 1, 1],
             ],
           },
         });
@@ -61,15 +56,28 @@ export default function Home() {
     console.log("beginLoop");
 
     let read = false;
+    let t = 0;
 
-    const draw = rgpu.render({ vertex, fragment });
+    const draw = rgpu.render({ vertex, fragment, buffer });
     const stop = rgpu.frame(async ({ dt, id }) => {
-      if (!read) {
-        read = true;
-        const data = await buffer.read();
-        console.log(data);
-      }
+      const tau = t * 0.001 * (2.0 * Math.PI);
+      const f = 0.5;
+
+      buffer.write({
+        color: [
+          [Math.sin(tau * f) * 0.5 + 0.5, 0, 0, 1],
+          [0, Math.sin(tau * f + (2 / 3) * Math.PI) * 0.5 + 0.5, 0, 1],
+          [0, 0, Math.sin(tau * f + (4 / 3) * Math.PI) * 0.5 + 0.5, 1],
+        ],
+      });
+      // if (!read) {
+      //   read = true;
+      //   const data = await buffer.read();
+      //   console.log(data);
+      // }
       draw();
+
+      t += dt;
     });
 
     return stop;

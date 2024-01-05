@@ -27,7 +27,7 @@ export class RGPUState implements IGPU {
     this.device = device;
     this.context = context;
     this.canvas = canvas;
-    this.allocator = new RGPUAllocator();
+    this.allocator = new RGPUAllocator(device);
 
     this.context.configure({
       device: this.device,
@@ -43,7 +43,7 @@ export class RGPUState implements IGPU {
     return result;
   }
 
-  render({ vertex, fragment }: RenderConfigOptions) {
+  render({ vertex, fragment, buffer }: RenderConfigOptions) {
     const pipeline = this.device.createRenderPipeline({
       layout: "auto",
       vertex: {
@@ -51,6 +51,9 @@ export class RGPUState implements IGPU {
           code: vertex,
         }),
         entryPoint: "main",
+        buffers: [
+          this.allocator.vertex_descriptor(buffer, { position: 0, color: 1 }),
+        ],
       },
       fragment: {
         module: this.device.createShaderModule({
@@ -81,6 +84,7 @@ export class RGPUState implements IGPU {
 
       const passEncoder = commandEncoder.beginRenderPass(passDescriptor);
       passEncoder.setPipeline(pipeline);
+      passEncoder.setVertexBuffer(0, this.allocator.data(buffer));
       passEncoder.draw(3);
       passEncoder.end();
 

@@ -7,6 +7,7 @@ export interface RGPUConfigOptions {
 export type RenderConfigOptions = {
   vertex: string;
   fragment: string;
+  buffer: BufferHandle;
 };
 
 export type RenderCallbackParameters = {
@@ -34,8 +35,8 @@ export interface BufferHandle {
   // map: () => Promise<void>;
   // unmap: () => Promise<void>;
   // state: () => "mapped" | "unmapped";
-  read: () => Promise<BufferData>;
-  // write: (data: BufferData) => Promise<void>
+  // read: () => Promise<BufferData>;
+  write: (data: BufferData) => Promise<boolean>;
 }
 
 /**
