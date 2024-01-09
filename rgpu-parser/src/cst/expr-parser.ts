@@ -206,8 +206,7 @@ export class RGPUExprParser extends RGPUParser {
 
     const template = this.template();
     if (template) {
-      template.children.unshift(left);
-      left = template;
+      left = this.node(TokenKind.AST_TEMPLATE_IDENTIFIER, [left, template]);
     }
 
     return this.absorb_trailing_trivia(left);
@@ -226,8 +225,9 @@ export class RGPUExprParser extends RGPUParser {
     const { current: template_start_token, trivia: leading_trivia } =
       this.advance();
     left = this.parse_infix(left, template_start_token);
+    left = left.children[1] as SyntaxNode;
     left.leading_trivia.push(...leading_trivia);
-    left.children.shift(); // get rid of the disambiguate template node?
+    // left.children.shift(); // get rid of the disambiguate template node?
 
     return this.absorb_trailing_trivia(left);
   }

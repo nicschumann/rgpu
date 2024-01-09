@@ -1,28 +1,40 @@
-import { BufferData, BufferHandle } from "./types";
+import { BufferData, BufferHandle, BufferUsage } from "./types";
 
 /**
  * [useful reference](https://toji.dev/webgpu-best-practices/buffer-uploads.html)
+ * [align reference](https://sotrh.github.io/learn-wgpu/showcase/alignment/#alignment-of-uniform-and-storage-buffers)
  */
 
 type BufferLocation = { name: string; offset: number; size: number };
 
 type BufferDescriptor = {
-  vertex_size: number;
-  vertex_count: number;
+  element_size: number;
+  element_count: number;
   locations: BufferLocation[];
 };
 
-type BufferTypes = "vertex";
-
-type AllocatedBuffer = {
-  vertex: {
-    readonly id: string;
-  };
+type BufferAllocation = {
+  dtype: "float32";
+  btype: BufferUsage;
+  cpudata: Float32Array;
+  gpudata: GPUBuffer;
+  descriptor: BufferDescriptor;
 };
 
-function map_buffer_data_to_descriptor(
-  data: BufferData
-): BufferDescriptor | false {
+function map_usage_to_buffer_type(usage: BufferUsage): GPUFlagsConstant {
+  switch (usage) {
+    case "vertex":
+      return GPUBufferUsage.VERTEX;
+    case "index":
+      return GPUBufferUsage.INDEX;
+    case "storage":
+      return GPUBufferUsage.STORAGE;
+    case "uniform":
+      return GPUBufferUsage.UNIFORM;
+  }
+}
+
+function map_data_to_descriptor(data: BufferData): BufferDescriptor | false {
   let locations = [];
   let vertex_count: number | null = null;
   let vertex_size: number = 0;
@@ -52,8 +64,8 @@ function map_buffer_data_to_descriptor(
   if (vertex_count == null) return false;
 
   return {
-    vertex_size,
-    vertex_count,
+    element_size: vertex_size,
+    element_count: vertex_count,
     locations,
   };
 }
@@ -81,7 +93,7 @@ function match_sub_descriptor(
   subdesc: BufferDescriptor,
   desc: BufferDescriptor
 ): boolean {
-  if (subdesc.vertex_count !== desc.vertex_count) return false;
+  if (subdesc.element_count !== desc.element_count) return false;
 
   for (var i = 0; i < subdesc.locations.length; i += 1) {
     let matched = false;
@@ -102,7 +114,7 @@ function match_sub_descriptor(
   return true;
 }
 
-function get_buffer_data_from_buffer(
+function get_data_from_buffer(
   desc: BufferDescriptor,
   buffer: Float32Array
 ): BufferData {
@@ -111,13 +123,11 @@ function get_buffer_data_from_buffer(
     structured_data[name] = [];
   });
 
-  for (let i = 0; i < desc.vertex_count; i += 1) {
+  for (let i = 0; i < desc.element_count; i += 1) {
     for (var loc = 0; loc < desc.locations.length; loc += 1) {
       const location = desc.locations[loc];
-      const start = (i * desc.vertex_size + desc.locations[loc].offset) / 4;
+      const start = (i * desc.element_size + desc.locations[loc].offset) / 4;
       const row = [];
-
-      console.log(location);
 
       for (let j = 0; j < location.size / 4; j += 1)
         row.push(buffer[start + j]);
@@ -129,18 +139,18 @@ function get_buffer_data_from_buffer(
   return structured_data;
 }
 
-function set_buffer_from_buffer_data(
+function set_buffer_from_data(
   descriptor: BufferDescriptor,
   data: BufferData,
   buffer: Float32Array
 ): Float32Array {
-  for (let i = 0; i < descriptor.vertex_count; i += 1) {
+  for (let i = 0; i < descriptor.element_count; i += 1) {
     for (let j = 0; j < descriptor.locations.length; j += 1) {
       const key = descriptor.locations[j].name;
       if (typeof data[key] === "undefined") continue;
 
       const b_index =
-        (i * descriptor.vertex_size + descriptor.locations[j].offset) / 4;
+        (i * descriptor.element_size + descriptor.locations[j].offset) / 4;
 
       const b_data = data[key][i];
 
@@ -153,11 +163,7 @@ function set_buffer_from_buffer_data(
 
 export class RGPUAllocator {
   buffers: {
-    [id: string]: {
-      cpudata: Float32Array;
-      gpudata: GPUBuffer;
-      descriptor: BufferDescriptor;
-    };
+    [id: string]: BufferAllocation;
   } = {};
   device: GPUDevice;
 
@@ -166,53 +172,75 @@ export class RGPUAllocator {
   }
 
   alloc_internal(
-    type: "vertex" | "index" | "storage" | "uniform",
-    buffer: Float32Array,
-    device: GPUDevice
-  ) {}
+    type:
+      | GPUBufferUsage["VERTEX"]
+      | GPUBufferUsage["INDEX"]
+      | GPUBufferUsage["UNIFORM"]
+      | GPUBufferUsage["STORAGE"],
+    copy_permissions: GPUBufferUsage["COPY_DST"] | GPUBufferUsage["COPY_SRC"],
+    buffer: Float32Array
+  ): GPUBuffer {
+    const gpubuffer = this.device.createBuffer({
+      size: buffer.byteLength,
+      usage: type | copy_permissions,
+    });
 
-  alloc_mutual(type: "read" | "write", data: BufferData | null) {}
+    this.device.queue.writeBuffer(gpubuffer, 0, buffer, 0);
+
+    return gpubuffer;
+  }
+
+  alloc_external(
+    map_permissions: GPUBufferUsage["MAP_READ"] | GPUBufferUsage["MAP_WRITE"],
+    copy_permissions: GPUBufferUsage["COPY_DST"] | GPUBufferUsage["COPY_SRC"],
+    buffer: Float32Array
+  ): GPUBuffer {
+    const gpubuffer = this.device.createBuffer({
+      size: buffer.byteLength,
+      usage: map_permissions | copy_permissions,
+    });
+
+    this.device.queue.writeBuffer(gpubuffer, 0, buffer, 0);
+
+    return gpubuffer;
+  }
+
+  alloc_mutual(type: "read" | "write") {}
 
   /**
    *
    * @param data <@link BufferData> describes a buffer layout
    */
-  alloc(
-    data: BufferData,
-    device: GPUDevice,
-    unmapAfterCreation: boolean = true
-  ): BufferHandle | false {
-    const descriptor = map_buffer_data_to_descriptor(data);
+  alloc(buffer_usage: BufferUsage, data: BufferData): BufferHandle | false {
+    const descriptor = map_data_to_descriptor(data);
+    const usage = map_usage_to_buffer_type(buffer_usage);
     if (!descriptor) return false;
 
-    const cpubuffer = new Float32Array(
-      (descriptor.vertex_count * descriptor.vertex_size) / 4
+    const cpudata = new Float32Array(
+      (descriptor.element_count * descriptor.element_size) / 4
     );
 
-    set_buffer_from_buffer_data(descriptor, data, cpubuffer);
+    set_buffer_from_data(descriptor, data, cpudata);
 
-    const gpubuffer = device.createBuffer({
-      size: cpubuffer.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
-
-    this.device.queue.writeBuffer(gpubuffer, 0, cpubuffer, 0);
-
-    // new Float32Array(gpubuffer.getMappedRange()).set(cpubuffer);
-    // if (unmapAfterCreation) gpubuffer.unmap();
-
+    const gpudata = this.alloc_internal(
+      usage,
+      GPUBufferUsage.COPY_DST,
+      cpudata
+    );
     const id = crypto.randomUUID();
 
     this.buffers[id] = {
-      cpudata: cpubuffer,
-      gpudata: gpubuffer,
+      dtype: "float32",
+      btype: buffer_usage,
+      cpudata,
+      gpudata,
       descriptor,
     };
 
     return {
       id,
       write: async (data: BufferData) => {
-        const subdescriptor = map_buffer_data_to_descriptor(data);
+        const subdescriptor = map_data_to_descriptor(data);
         if (!subdescriptor) return false; // invalid descriptor // structurally
 
         const buffer = this.buffers[id];
@@ -223,49 +251,23 @@ export class RGPUAllocator {
         );
 
         if (descriptors_match) {
-          set_buffer_from_buffer_data(descriptor, data, buffer.cpudata);
+          set_buffer_from_data(descriptor, data, buffer.cpudata);
           this.device.queue.writeBuffer(buffer.gpudata, 0, buffer.cpudata, 0);
         }
 
         return false; // descriptor does not match target buffer...
       },
-
-      // read: async () => {
-      //   const allocation = this.buffers[id];
-      //   if (allocation.gpudata.mapState === "unmapped")
-      //     await allocation.gpudata.mapAsync(GPUMapMode.WRITE);
-
-      //   allocation.cpudata = new Float32Array(
-      //     allocation.gpudata.getMappedRange()
-      //   );
-
-      //   const data = get_buffer_data_from_buffer(
-      //     allocation.descriptor,
-      //     allocation.cpudata
-      //   );
-
-      //   allocation.gpudata.unmap();
-
-      //   return data;
-      // },
     };
   }
 
   vertex_descriptor(
     handle: BufferHandle,
     locations: { [name: string]: number }
-  ): {
-    arrayStride: number;
-    attributes: {
-      shaderLocation: number;
-      offset: number;
-      format: GPUVertexFormat;
-    }[];
-  } {
+  ): GPUVertexBufferLayout {
     const data = this.buffers[handle.id];
 
     return {
-      arrayStride: data.descriptor.vertex_size,
+      arrayStride: data.descriptor.element_size,
       attributes: data.descriptor.locations.map((loc) => {
         // NOTE(Nic): all sizes are 4 bytes for now.
         const format = `float32` + (loc.size === 4 ? "" : `x${loc.size / 4}`);
@@ -281,5 +283,9 @@ export class RGPUAllocator {
 
   data(handle: BufferHandle): GPUBuffer {
     return this.buffers[handle.id].gpudata;
+  }
+
+  size(handle: BufferHandle): number {
+    return this.buffers[handle.id].descriptor.element_count;
   }
 }

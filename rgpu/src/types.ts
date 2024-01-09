@@ -7,7 +7,8 @@ export interface RGPUConfigOptions {
 export type RenderConfigOptions = {
   vertex: string;
   fragment: string;
-  buffer: BufferHandle;
+  attributes: BufferHandle;
+  uniforms?: BufferHandle[][];
 };
 
 export type RenderCallbackParameters = {
@@ -15,12 +16,17 @@ export type RenderCallbackParameters = {
   id: ID;
 };
 
+interface NumericIndexable {
+  [index: number]: number;
+  length: number;
+}
+
 /**
  * Types for creating buffer resources.
  */
-export type BufferUsage = "vertex";
-export type BufferRawType = number[][];
-export type BufferData = { [name: string]: number[][] };
+export type BufferUsage = "vertex" | "index" | "storage" | "uniform";
+export type BufferRawType = NumericIndexable[];
+export type BufferData = { [name: string]: BufferRawType };
 
 export type BufferParameters =
   // | {

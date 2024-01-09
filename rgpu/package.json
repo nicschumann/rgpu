@@ -14,6 +14,9 @@
     "docs": "typedoc --options typedoc.json",
     "test": "yarn build:test && karma start"
   },
+  "dependencies": {
+    "rgpu-parser": "workspace:*"
+  },
   "devDependencies": {
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",

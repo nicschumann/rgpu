@@ -1,4 +1,5 @@
 import { RGPUAllocator } from "./alloc";
+import { RGPUShaderChecker } from "./check";
 import {
   BufferHandle,
   BufferParameters,
@@ -13,6 +14,7 @@ export class RGPUState implements IGPU {
   private context: GPUCanvasContext;
   private canvas: HTMLCanvasElement;
   private allocator: RGPUAllocator;
+  private checker: RGPUShaderChecker;
 
   private alphaMode: GPUCanvasAlphaMode = "premultiplied";
   private format: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -28,6 +30,7 @@ export class RGPUState implements IGPU {
     this.context = context;
     this.canvas = canvas;
     this.allocator = new RGPUAllocator(device);
+    this.checker = new RGPUShaderChecker();
 
     this.context.configure({
       device: this.device,
@@ -37,22 +40,46 @@ export class RGPUState implements IGPU {
   }
 
   buffer(input: BufferParameters) {
-    const result = this.allocator.alloc(input.data, this.device);
+    const result = this.allocator.alloc(input.usage, input.data);
     if (!result) console.log("failed to create buffer!");
 
     return result;
   }
 
-  render({ vertex, fragment, buffer }: RenderConfigOptions) {
+  render({ vertex, fragment, attributes, uniforms = [] }: RenderConfigOptions) {
+    const sig = this.checker.check_pipeline_stage(vertex);
+
+    console.log(sig);
+    console.log(uniforms);
+
+    const bindGroupLayouts: GPUBindGroupLayout[] = uniforms.map((group) => {
+      return this.device.createBindGroupLayout({
+        entries: group.map((binding, i) => ({
+          binding: i,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: {
+            type: "uniform",
+          },
+        })),
+      });
+    });
+
+    const pipelineLayout = this.device.createPipelineLayout({
+      bindGroupLayouts,
+    });
+
     const pipeline = this.device.createRenderPipeline({
-      layout: "auto",
+      layout: pipelineLayout,
       vertex: {
         module: this.device.createShaderModule({
           code: vertex,
         }),
         entryPoint: "main",
         buffers: [
-          this.allocator.vertex_descriptor(buffer, { position: 0, color: 1 }),
+          this.allocator.vertex_descriptor(attributes, {
+            position: 0,
+            color: 1,
+          }),
         ],
       },
       fragment: {
@@ -67,25 +94,43 @@ export class RGPUState implements IGPU {
       },
     });
 
+    const uniformBindGroups = uniforms.map((group, i) => {
+      return this.device.createBindGroup({
+        layout: bindGroupLayouts[i],
+        entries: group.map((handle, binding) => ({
+          binding,
+          resource: {
+            buffer: this.allocator.data(handle),
+          },
+        })),
+      });
+    });
+
+    const passDescriptor: GPURenderPassDescriptor = {
+      colorAttachments: [
+        {
+          view: (<unknown>null) as GPUTextureView, // assigned later
+          clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+          loadOp: "clear" as GPULoadOp,
+          storeOp: "store" as GPUStoreOp,
+        },
+      ],
+    };
+
     return () => {
       const commandEncoder = this.device.createCommandEncoder();
       const textureView = this.context.getCurrentTexture().createView();
 
-      const passDescriptor: GPURenderPassDescriptor = {
-        colorAttachments: [
-          {
-            view: textureView,
-            clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
-            loadOp: "clear" as GPULoadOp,
-            storeOp: "store" as GPUStoreOp,
-          },
-        ],
-      };
+      // @ts-ignore
+      passDescriptor.colorAttachments[0].view = textureView;
 
       const passEncoder = commandEncoder.beginRenderPass(passDescriptor);
       passEncoder.setPipeline(pipeline);
-      passEncoder.setVertexBuffer(0, this.allocator.data(buffer));
-      passEncoder.draw(3);
+      uniforms.forEach((_, i) =>
+        passEncoder.setBindGroup(i, uniformBindGroups[i])
+      );
+      passEncoder.setVertexBuffer(0, this.allocator.data(attributes));
+      passEncoder.draw(this.allocator.size(attributes));
       passEncoder.end();
 
       this.device.queue.submit([commandEncoder.finish()]);

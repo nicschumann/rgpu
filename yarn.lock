@@ -5222,6 +5222,7 @@ __metadata:
     rgpu: "workspace:*"
     tailwindcss: "npm:^3.3.0"
     typescript: "npm:^5"
+    wgpu-matrix: "npm:^2.5.1"
   languageName: unknown
   linkType: soft
 
@@ -6075,6 +6076,13 @@ __metadata:
   version: 4.0.2
   resolution: "webidl-conversions@npm:4.0.2"
   checksum: def5c5ac3479286dffcb604547628b2e6b46c5c5b8a8cfaa8c71dc3bafc85859bde5fbe89467ff861f571ab38987cf6ab3d6e7c80b39b999e50e803c12f3164f
+  languageName: node
+  linkType: hard
+
+"wgpu-matrix@npm:^2.5.1":
+  version: 2.5.1
+  resolution: "wgpu-matrix@npm:2.5.1"
+  checksum: 3342cbc8608dfa96828305d7659045d9988d8aec099a4feaf09318911c7858ea7fe5bf48edd606cb799d8b434b3465df27ad272503ecafd3e1dddfdc750defb4
   languageName: node
   linkType: hard
 
